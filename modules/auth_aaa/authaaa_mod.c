@@ -126,6 +126,7 @@ static int mod_init(void)
 	memset(vals, 0, sizeof(vals));
 	attrs[A_SERVICE_TYPE].name			= "Service-Type";
 	attrs[A_SIP_URI_USER].name			= "Sip-URI-User";
+	attrs[A_SIP_SOURCE_IP_ADDRESS].name			= "Sip-Source-IP-Address";
 	attrs[A_DIGEST_RESPONSE].name		= "Digest-Response";
 	attrs[A_DIGEST_ALGORITHM].name		= "Digest-Algorithm";
 	attrs[A_DIGEST_BODY_DIGEST].name	= "Digest-Body-Digest";
