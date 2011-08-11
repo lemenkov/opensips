@@ -3633,8 +3633,6 @@ static int rtpproxy_offer_answer(struct sip_msg *msg, struct rtpp_args *args,
 			}
 			break;
 
-		case 'w':
-		case 'W':
 		case 's':
 		case 'S':
 			if (append_opts(&opts, 'S') == -1) {
