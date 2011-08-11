@@ -512,7 +512,7 @@ description (o=) should be also changed.
   - *c* - flags to change the session-level 
 SDP connection (c=) IP if media-description also includes 
 connection information.
-  - *s/w* - flags that for the UA from which 
+  - *s* - flags that for the UA from which 
 message is received, support symmetric RTP must be forced.
   - *n[<SOCKET>]* - flags that enables
 the notification timeout for the session. One can specify an
