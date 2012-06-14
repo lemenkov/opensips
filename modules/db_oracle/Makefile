@@ -55,8 +55,4 @@ LIBS +=-locci -lclntsh
 #DEFS+=-DLINUX -D_GNU_SOURCE -D_REENTRANT
 #LIBS+=-lpthread
 
-ifneq ($(ORAPATH),)
-    LIBS +=-Wl,-rpath $(ORAPATH)
-endif
-
 include ../../Makefile.modules
