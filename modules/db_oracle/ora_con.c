@@ -22,9 +22,10 @@
 
 #include <string.h>
 #include <stdio.h>
+#include <errno.h>
 #include "../../mem/mem.h"
 #include "../../dprint.h"
-#include "asynch.h"
+#include "timer.h"
 #include "ora_con.h"
 
 /*************************************************************************/
@@ -105,6 +106,12 @@ bad_param:
 	status = OCIAttrSet(con->svchp, OCI_HTYPE_SVCCTX, con->authp, 0,
                    OCI_ATTR_SESSION, con->errhp);
 	if (status != OCI_SUCCESS) goto connect_err;
+
+        if (init_ora_timer(con) != 0) {
+           LM_ERR("can't start oracle timer thread\n");
+           goto drop_connection;
+        }
+
 	status = db_oracle_reconnect(con);
 	if (status != OCI_SUCCESS) {
 connect_err:
@@ -122,12 +129,11 @@ drop_connection:
 	}
 
 	// timelimited operation
-	status = begin_timelimit(con, 0);
-	if (status != OCI_SUCCESS) goto connect_err;
-	do status = OCIServerVersion(con->svchp, con->errhp, (OraText*)buf,
+	request_timer();
+	status = OCIServerVersion(con->svchp, con->errhp, (OraText*)buf,
 		(ub4)sizeof(buf), OCI_HTYPE_SVCCTX);
-	while (wait_timelimit(con, status));
-	if (done_timelimit(con, status)) goto drop_connection;
+	timer_stop();
+	
 	if (status != OCI_SUCCESS) goto connect_err;
 	LM_INFO("server version is %s\n", buf);
 	return con;
@@ -139,6 +145,7 @@ drop_connection:
  */
 void db_oracle_free_connection(ora_con_t* con)
 {
+	destroy_ora_timer(con);
 	if (!con) return;
 
 	if (con->connected)
@@ -164,20 +171,17 @@ void db_oracle_free_connection(ora_con_t* con)
 void db_oracle_disconnect(ora_con_t* con)
 {
 	sword status;
-
-	switch (con->connected) {
-	default:
-		status = OCISessionEnd(con->svchp, con->errhp, con->authp,
-			OCI_DEFAULT);
-		if (status != OCI_SUCCESS)
-			LM_ERR("driver: %s\n", db_oracle_error(con, status));
-	case 1:
+	if (con->connected > 0) {
+		if (con->connected > 1) {
+			status = OCISessionEnd(con->svchp, con->errhp, con->authp,
+				OCI_DEFAULT);
+			if (status != OCI_SUCCESS)
+				LM_ERR("driver: %s\n", db_oracle_error(con, status));
+		}
 		status = OCIServerDetach(con->srvhp, con->errhp, OCI_DEFAULT);
 		if (status != OCI_SUCCESS)
 			LM_ERR("driver: %s\n", db_oracle_error(con, status));
 		con->connected = 0;
-	case 0:
-		break;
 	}
 }
 
@@ -192,48 +196,19 @@ sword db_oracle_reconnect(ora_con_t* con)
 	if (con->connected)
 		db_oracle_disconnect(con);
 
-	/* timelimited operation, but OCI tcp-network does not support it :( */
+	restore_timer();
 	status = OCIServerAttach(con->srvhp, con->errhp, (OraText*)con->uri,
 		con->uri_len, 0);
+	timer_stop();
 	if (status == OCI_SUCCESS) {
 		++con->connected;
-		/*
-		 * timelimited operation, but OCI has BUG in asynch
-		 * implementation of OCISessionBegin :(.
-		 *
-		 * Next code is 'empiric hack' that work (tested) in v10/v11.
-		 */
-		status = begin_timelimit(con, 1);
-		if (status != OCI_SUCCESS) goto done;
+		request_timer();
 		status = OCISessionBegin(con->svchp, con->errhp, con->authp,
 			OCI_CRED_RDBMS, OCI_DEFAULT);
-		while (wait_timelimit(con, status)) {
-			sword code;
-
-			status = OCIServerVersion(con->svchp, con->errhp, NULL,
-				0, OCI_HTYPE_SVCCTX);
-
-			if (   status != OCI_ERROR
-			    || OCIErrorGet(con->errhp, 1, NULL, &code, NULL, 0,
-				     OCI_HTYPE_ERROR) != OCI_SUCCESS) break;
-			switch (code) {
-			case 24909:	/* other call in progress */
-				status = OCI_STILL_EXECUTING;
-				continue;
-
-			case 3127:	/* no new operation until active ends */
-				status = OCISessionBegin(con->svchp, con->errhp,
-					con->authp, OCI_CRED_RDBMS, OCI_DEFAULT);
-			default:
-				break;
-			}
-			break;
-		}
-		if (done_timelimit(con, status)) goto done;
+		timer_stop();
 
 		if (status == OCI_SUCCESS)
 			++con->connected;
 	}
-done:
 	return status;
 }
