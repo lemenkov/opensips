@@ -50,6 +50,7 @@ struct ora_con {
 
 	int connected;		/* Authorized session started */
 	int bindpos;		/* Last Bind handle position */
+	pthread_t timer;
 
 	query_data_t* pqdata;	/* Temporary: cb data for submit_query/store_result */
 
