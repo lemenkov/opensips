@@ -34,7 +34,7 @@
 #include "val.h"
 #include "ora_con.h"
 #include "res.h"
-#include "asynch.h"
+#include "timer.h"
 #include "dbase.h"
 
 
@@ -210,7 +210,6 @@ static int db_oracle_submit_query(const db_con_t* _h, const str* _s)
 	OCIDate odt[sizeof(bind)/sizeof(bind[0])];
 	str tmps;
 	sword status;
-	int pass;
 	ora_con_t* con = CON_ORA(_h);
 	query_data_t* pqd = con->pqdata;
 	size_t hc = pqd->_n + pqd->_nw;
@@ -222,31 +221,15 @@ static int db_oracle_submit_query(const db_con_t* _h, const str* _s)
 		return -1;
 	}
 
-	if (!pqd->_rs) {
-		/*
-		 * This method is at ~25% faster as set OCI_COMMIT_ON_SUCCESS
-		 * in StmtExecute
-		 */
-		tmps.len = snprintf(st_buf, sizeof(st_buf),
-			"begin %.*s; commit write batch nowait; end;",
-			_s->len, _s->s);
-		if ((unsigned)tmps.len >= sizeof(st_buf))
-			return sql_buf_small();
-		tmps.s = st_buf;
-		_s = &tmps;
-	}
-
-	pass = 1;
-	if (!con->connected) {
+	if (con->connected != 2) {
 		status = db_oracle_reconnect(con);
 		if (status != OCI_SUCCESS) {
 			LM_ERR("can't restore connection: %s\n", db_oracle_error(con, status));
 			return -2;
 		}
 		LM_INFO("connection restored\n");
-		--pass;
 	}
-repeat:
+
 	stmthp = NULL;
 	status = OCIHandleAlloc(con->envhp, (dvoid**)(dvoid*)&stmthp,
 		    OCI_HTYPE_STMT, 0, NULL);
@@ -289,14 +272,10 @@ bind_err:
 		}
 	}
 
-	// timelimited operation
-	status = begin_timelimit(con, 0);
-	if (status != OCI_SUCCESS) goto ora_err;
-	do status = OCIStmtExecute(con->svchp, stmthp, con->errhp,
-		!pqd->_rs, 0, NULL, NULL,
-		pqd->_rs ? OCI_STMT_SCROLLABLE_READONLY : OCI_DEFAULT);
-	while (wait_timelimit(con, status));
-	if (done_timelimit(con, status)) goto stop_exec;
+	request_timer();
+	status = OCIStmtExecute(con->svchp, stmthp, con->errhp,
+		!pqd->_rs, 0, NULL, NULL, pqd->_rs ? OCI_DEFAULT : OCI_COMMIT_ON_SUCCESS);
+	timer_stop();
 	switch (status)	{
 	case OCI_SUCCESS_WITH_INFO:
 		LM_WARN("driver: %s\n", db_oracle_errorinfo(con));
@@ -308,8 +287,8 @@ bind_err:
 			OCIHandleFree(stmthp, OCI_HTYPE_STMT);
 		return 0;
 	default:
-	    pass = -pass;
-	    break;
+		LM_ERR("timeout/not connected to oracle\n");
+		break;
 	}
 
 ora_err:
@@ -317,15 +296,13 @@ ora_err:
 stop_exec:
 	if (stmthp)
 		OCIHandleFree(stmthp, OCI_HTYPE_STMT);
-	if (pass == -1 && !con->connected) {
-		/* Attemtp to reconnect */
-		if (db_oracle_reconnect(con) == OCI_SUCCESS) {
-			LM_NOTICE("attempt repeat after reconnect\n");
-			pass = 0;
-			goto repeat;
-		}
+	LM_INFO("reconnecting to oracle...\n");
+	/* Attempt to reconnect */
+	if (db_oracle_reconnect(con) == OCI_SUCCESS)
+		LM_INFO("connection restored\n");
+	else
 		LM_ERR("connection loss\n");
-	}
+
 	return -4;
 }
 
