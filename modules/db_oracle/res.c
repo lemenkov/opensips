@@ -32,7 +32,7 @@
 #include "../../dprint.h"
 #include "ora_con.h"
 #include "dbase.h"
-#include "asynch.h"
+#include "timer.h"
 #include "res.h"
 
 
@@ -54,6 +54,10 @@ struct dmap {
 };
 typedef struct dmap dmap_t;
 
+typedef struct ora_row {
+   struct db_row hdr;
+   struct ora_row* next;
+} ora_row_t;
 
 /*
  * Get and convert columns from a result. Define handlers and buffers
@@ -362,66 +366,74 @@ static int convert_row(db_res_t* _res, db_row_t* _r, dmap_t* _d)
  */
 static int get_rows(ora_con_t* con, db_res_t* _r, OCIStmt* _c, dmap_t* _d)
 {
-	ub4 rcnt;
+	ub4 i = 0, rcnt = 0;
 	sword status;
 	unsigned n = RES_COL_N(_r);
-
+	// Since OCI have not "mysql_num_rows()", sequentialy fetch all rows into tmp area orow_list.
+	// Then call db_allocate_rows() and copy tmp to db module.
+	ora_row_t *orow_list = NULL, *orow_it, *orow_tail;
+	
 	memcpy(_d->len, _d->ilen, sizeof(_d->len[0]) * n);
-
-	// timelimited operation
-	status = begin_timelimit(con, 0);
-	if (status != OCI_SUCCESS) goto ora_err;
-	do status = OCIStmtFetch2(_c, con->errhp, 1, OCI_FETCH_NEXT, 0,
-		OCI_DEFAULT);
-	while (wait_timelimit(con, status));
-	if (done_timelimit(con, status)) goto stop_load;
-	if (status != OCI_SUCCESS) {
-		if (status != OCI_NO_DATA)
-			goto ora_err;
-
-		RES_ROW_N(_r) = 0;
-		RES_ROWS(_r) = NULL;
-		return 0;
+	
+	request_timer();
+	while ((status = OCIStmtFetch2(_c, con->errhp, 1, OCI_FETCH_NEXT, 0,
+		OCI_DEFAULT)) == OCI_SUCCESS) {
+		timer_stop();
+	
+		orow_it = (ora_row_t*) pkg_malloc(sizeof(ora_row_t) + sizeof(db_val_t)*RES_COL_N(_r));
+		if (orow_it == NULL) {
+			LM_ERR("no private memory left\n");
+			goto stop_load;
+		}
+		memset(orow_it, 0, sizeof(ora_row_t) + sizeof(db_val_t)*RES_COL_N(_r));
+		orow_it->hdr.values = (db_val_t*)(orow_it+1);
+		
+		if (orow_list == NULL)
+			orow_list = orow_it;
+		else
+			orow_tail->next = orow_it;
+		orow_tail = orow_it;
+		
+		if (convert_row(_r, &orow_it->hdr, _d) < 0) {
+			LM_ERR("erroc convert row\n");
+			goto stop_load;
+		}
+		memcpy(_d->len, _d->ilen, sizeof(_d->len[0]) * n);
+		++rcnt;
+		request_timer();
 	}
-
-	status = OCIAttrGet(_c, OCI_HTYPE_STMT, &rcnt, NULL,
-		OCI_ATTR_CURRENT_POSITION, con->errhp);
-	if (status != OCI_SUCCESS) goto ora_err;
-	if (!rcnt) {
-		LM_ERR("lastpos==0\n");
-		goto stop_load;
-	}
-
+	timer_stop();
+	if (status != OCI_NO_DATA)
+		goto ora_err;
+	
 	RES_ROW_N(_r) = rcnt;
 	if (db_allocate_rows( _r, rcnt)!=0) {
 		LM_ERR("no private memory left\n");
-		return -1;
+		goto stop_load;
 	}
-
-	while ( 1 ) {
-		if (convert_row(_r, &RES_ROWS(_r)[--rcnt], _d) < 0) {
-			LM_ERR("error convert row\n");
-			goto stop_load;
-		}
-
-		if (!rcnt)
-			return 0;
-
-		memcpy(_d->len, _d->ilen, sizeof(_d->len[0]) * n);
-		// timelimited operation
-		status = begin_timelimit(con, 0);
-		if (status != OCI_SUCCESS) goto ora_err;
-		do status = OCIStmtFetch2(_c, con->errhp, 1, OCI_FETCH_PRIOR, 0,
-			OCI_DEFAULT);
-		while (wait_timelimit(con, status));
-		if (done_timelimit(con, status)) goto stop_load;
-		if (status != OCI_SUCCESS) break;
+	
+	for (orow_it = orow_list; orow_it; orow_it = orow_it->next) {
+		memcpy(ROW_VALUES(&RES_ROWS(_r)[i]), ROW_VALUES(&orow_it->hdr), sizeof(db_val_t)*RES_COL_N(_r));
+		ROW_N(&RES_ROWS(_r)[i]) = ROW_N(&orow_it->hdr);
+		++i;
 	}
+	
+	for (orow_it = orow_list; orow_it; orow_it = orow_list) {
+		orow_list = orow_it->next;
+		pkg_free(orow_it);
+		orow_it = NULL;
+	}
+	return 0;
+	
 ora_err:
 	LM_ERR("driver: %s\n", db_oracle_error(con, status));
 stop_load:
-	db_free_rows(_r);
-	RES_ROW_N(_r) = 0;	/* TODO: skipped in db_res.c :) */
+	for (orow_it = orow_list; orow_it; orow_it = orow_list) {
+		orow_list = orow_it->next;
+		db_free_row(&orow_it->hdr);
+		pkg_free(orow_it);
+		orow_it = NULL;
+	}
 	return -3;
 }
 
