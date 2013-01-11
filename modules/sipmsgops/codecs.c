@@ -34,6 +34,7 @@
 #include "codecs.h"
 #include "../../route.h"
 #include "../../mod_fix.h"
+#include "../../ut.h"
 
 #define MAX_STREAMS 64
 
@@ -528,7 +529,9 @@ static int stream_process(struct sip_msg * msg, struct sdp_stream_cell *cell,
 
 				if(op == FIND)
 				{
-					ret = 1;
+					str2sint(&(payload->rtp_payload), &ret);
+					if( (ret >= 0) && (ret <= 34) ) /* if a fixed payload ID then just return 1 */
+						ret = 1;
 					goto end;
 				}
 
@@ -685,22 +688,12 @@ int codec_find (struct sip_msg* msg, char* str1 )
 
 	LM_DBG("searching for codec <%.*s> \n",res.len,res.s);
 
-	if( do_for_all_streams( msg, &res, NULL, NULL,
-		FIND, DESC_NAME) <= 0)
-		return -1;
-
-	return 1;
-
+	return do_for_all_streams( msg, &res, NULL, NULL, FIND, DESC_NAME);
 }
 
 int codec_find_re (struct sip_msg* msg, char* str1 )
 {
-
-	if( do_for_all_streams(msg, NULL, NULL, (regex_t*)str1,
-		FIND, DESC_REGEXP) <= 0)
-		return -1;
-
-	return 1;
+	return do_for_all_streams(msg, NULL, NULL, (regex_t*)str1, FIND, DESC_REGEXP);
 }
 
 
@@ -723,11 +716,7 @@ int codec_find_clock (struct sip_msg* msg, char* str1,char * str2 )
 	LM_DBG("searching for codec <%.*s> with clock <%.*s> \n",
 		codec.len,codec.s,clock.len,clock.s);
 
-	if( do_for_all_streams( msg, &codec, &clock, NULL,
-		FIND, DESC_NAME_AND_CLOCK) <= 0)
-		return -1;
-
-	return 1;
+	return do_for_all_streams( msg, &codec, &clock, NULL, FIND, DESC_NAME_AND_CLOCK);
 }
 
 
