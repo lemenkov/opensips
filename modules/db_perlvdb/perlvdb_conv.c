@@ -215,7 +215,6 @@ SV *cond2perlcond(db_key_t key, db_op_t op, db_val_t* val) {
 
 int perlresult2dbres(SV *perlres, db_res_t **r) {
 	
-	HV * result = NULL;
 	SV *colarrayref = NULL;
 	AV *colarray = NULL;
 	SV *acol = NULL;
@@ -253,14 +252,11 @@ int perlresult2dbres(SV *perlres, db_res_t **r) {
 		goto error;
 	}
 	
-	result = (HV*)SvRV(perlres);
-	 
 	/* Memory allocation for C side result structure */
 	*r = db_new_result();
 	/* Fetch column definitions */
-	colarrayref = *hv_fetchs(result, PERL_VDB_COLDEFSMETHOD, 0);
-	/*	colarrayref = perlvdb_perlmethod(perlres, PERL_VDB_COLDEFSMETHOD,
-			NULL, NULL, NULL, NULL); */
+	colarrayref = perlvdb_perlmethod(perlres, PERL_VDB_COLDEFSMETHOD,
+			NULL, NULL, NULL, NULL);
 	if (!(SvROK(colarrayref))) goto error;
 	colarray = (AV *)SvRV(colarrayref);
 	
@@ -297,25 +293,9 @@ int perlresult2dbres(SV *perlres, db_res_t **r) {
 		
 
 	}
-	if(hv_exists(result, "rows", 4)){
-		rowarrayref =(SV*) hv_fetchs(result, "rows", 0);
-	}else{
-                (*r)->n = 0;
-                (*r)->res_rows = 0;
-                (*r)->last_row = 0;
-                goto end;
+	rowarrayref = perlvdb_perlmethod(perlres, PERL_VDB_ROWSMETHOD,
+			NULL, NULL, NULL, NULL);
 
-	}
-
-	if(rowarrayref){
-		rowarrayref = *((SV**)rowarrayref);
-	}else{
-                (*r)->n = 0;
-                (*r)->res_rows = 0;
-                (*r)->last_row = 0;
-                goto end;
-
-	}
 	if (!(SvROK(rowarrayref))) { /* Empty result set */
 		(*r)->n = 0;
 		(*r)->res_rows = 0;
@@ -354,11 +334,10 @@ int perlresult2dbres(SV *perlres, db_res_t **r) {
 				cur_val.nul = 1;
 				continue;
 			}
-			atypesv = *hv_fetchs((HV*)SvRV(aelement),PERL_VDB_TYPEMETHOD,0); /*aelement->{type} */
-			atype = SvIV(atypesv);
-			/*atypesv = perlvdb_perlmethod(aelement,
+			atypesv = perlvdb_perlmethod(aelement,
 						PERL_VDB_TYPEMETHOD,
-						NULL, NULL, NULL, NULL);*/
+						NULL, NULL, NULL, NULL);
+			atype = SvIV(atypesv);
 			aval = perlvdb_perlmethod(aelement, PERL_VDB_DATAMETHOD,
 					NULL, NULL, NULL, NULL);
 			(*r)->rows[i].values[j].type = atype;
