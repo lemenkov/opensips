@@ -22,6 +22,12 @@ if [ -f ~/.opensipsctlrc ]; then
 	. ~/.opensipsctlrc
 fi
 
+# Allow overriding opensipsctlrc using environmental variable (usable for users
+# with /sbin/nologin as a shell, such as nagios).
+if [ -f "$OPENSIPSCTLRC" ]; then
+	. $OPENSIPSCTLRC
+fi
+
 if [ $TEST = "true" ]; then
 	if [ -f ./opensipsctlrc ]; then
 		. ./opensipsctlrc
