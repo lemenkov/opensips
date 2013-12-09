@@ -129,9 +129,10 @@ rtpproxy_stream(struct sip_msg* msg, str *pname, int count, int stream2uac)
         if (to_tag.len <= 0)
             nitems -= 2;
     }
-    send_rtpp_command(node, v, nitems);
+    if (send_rtpp_command(node, v, nitems))
+	    return 1;
 
-    return 1;
+    return -1;
 }
 
 static int
@@ -212,9 +213,10 @@ rtpproxy_stop_stream(struct sip_msg* msg, int stream2uac)
         if (to_tag.len <= 0)
             nitems -= 2;
     }
-    send_rtpp_command(node, v, nitems);
+    if (send_rtpp_command(node, v, nitems))
+	    return 1;
 
-    return 1;
+    return -1;
 }
 
 int
