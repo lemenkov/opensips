@@ -3704,14 +3704,13 @@ static int start_recording_f(struct sip_msg* msg, char *foo, char *bar)
 		if (to_tag.len <= 0)
 			nitems = 6;
 	}
-	send_rtpp_command(node, v, nitems);
-
-	if(nh_lock)
-	{
-		/* we are done reading -> unref the data */
-		lock_stop_read( nh_lock );
+	if(send_rtpp_command(node, v, nitems)) {
+		if(nh_lock) {
+			/* we are done reading -> unref the data */
+			lock_stop_read( nh_lock );
+		}
+		return 1;
 	}
-	return 1;
 
 error:
 	if(!nh_lock)
