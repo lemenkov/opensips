@@ -2172,7 +2172,6 @@ select_rtpp_node(struct sip_msg * msg, str callid)
 	sum &= 0xff;
 
 	was_forced = 0;
-retry:
 	weight_sum = 0;
 	constant_weight_sum = 0;
 	found = 0;
@@ -2189,21 +2188,14 @@ retry:
 		}
 	}
 	if (found == 0) {
-		/* No proxies? Force all to be redetected, if not yet */
-		if (was_forced)
-			return NULL;
-		was_forced = 1;
-		for(node=selected_rtpp_set->rn_first; node!=NULL; node=node->rn_next) {
-			node->rn_disabled = rtpp_test(node, 1, 1);
-		}
-		goto retry;
+		/* No proxies */
+		return NULL;
 	}
 	sumcut = weight_sum ? sum % constant_weight_sum : -1;
 	/*
 	 * sumcut here lays from 0 to constant_weight_sum-1.
 	 * Scan proxy list and decrease until appropriate proxy is found.
 	 */
-	was_forced = 0;
 	for (node=selected_rtpp_set->rn_first; node!=NULL;) {
 		if (sumcut < (int)node->rn_weight) {
 			if (!node->rn_disabled)
