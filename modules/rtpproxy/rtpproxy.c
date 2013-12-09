@@ -2138,7 +2138,7 @@ static struct rtpp_set * select_rtpp_set(int id_set ){
  * too expensive here.
  */
 struct rtpp_node *
-select_rtpp_node(struct sip_msg * msg, str callid, int do_test)
+select_rtpp_node(struct sip_msg * msg, str callid)
 {
 	unsigned sum, weight_sum;
 	struct rtpp_node* node;
@@ -2207,7 +2207,7 @@ retry:
 	for (node=selected_rtpp_set->rn_first; node!=NULL;) {
 		if (sumcut < (int)node->rn_weight) {
 			if (!node->rn_disabled)
-				goto found;
+				goto done;
 			if (was_forced == 0) {
 				/* appropriate proxy is disabled : redistribute on enabled ones */
 				sumcut = weight_sum ? sum %  weight_sum : -1;
@@ -2221,12 +2221,6 @@ retry:
 	}
 	/* No node list */
 	return NULL;
-found:
-	if (do_test) {
-		node->rn_disabled = rtpp_test(node, node->rn_disabled, 0);
-		if (node->rn_disabled)
-			goto retry;
-	}
 done:
 	/* Store rtpproxy used */
 	if (rtpp_sock_pvar_pvname.s!=0) {
@@ -2275,8 +2269,7 @@ unforce_rtp_proxy_f(struct sip_msg* msg, char* str1, char* str2)
 	if(msg->id != current_msg_id){
 		selected_rtpp_set = *default_rtpp_set;
 	}
-	
-	node = select_rtpp_node(msg, callid, 1);
+	node = select_rtpp_node(msg, callid);
 	if (!node) {
 		LM_ERR("no available proxies\n");
 		goto error;
@@ -2940,7 +2933,7 @@ force_rtp_proxy(struct sip_msg* msg, char* str1, char* str2, int offer)
 	if (msg->id != current_msg_id) {
 		selected_rtpp_set = *default_rtpp_set;
 	}
-	args.node = select_rtpp_node(msg, args.callid, 1);
+	args.node = select_rtpp_node(msg, args.callid);
 	if (args.node == NULL) {
 		LM_ERR("no available proxies\n");
 		return (-1);
@@ -3464,7 +3457,7 @@ force_rtp_proxy_body(struct sip_msg* msg, struct force_rtpp_args *args)
 				}
 				/* if not successfull choose a different rtpproxy */
 				if (!cp) {
-					args->node = select_rtpp_node(msg, args->callid, 0);
+					args->node = select_rtpp_node(msg, args->callid);
 					if (!args->node) {
 						LM_ERR("no available proxies\n");
 						goto error;
@@ -3685,8 +3678,7 @@ static int start_recording_f(struct sip_msg* msg, char *foo, char *bar)
 	if(msg->id != current_msg_id){
 		selected_rtpp_set = *default_rtpp_set;
 	}
-	
-	node = select_rtpp_node(msg, callid, 1);
+	node = select_rtpp_node(msg, callid);
 	if (!node) {
 		LM_ERR("no available proxies\n");
 		goto error;
