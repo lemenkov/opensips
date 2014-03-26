@@ -76,7 +76,7 @@ ifeq ($(NEW),yes)
 	# remove the abyss library - we already have
 	# the code in the module
 	MY_DEFS+=-D_UNIX
-	MY_LIBS:=$(filter-out %xmlrpc_abyss %xmlrpc_server_abyss %pthread, $(MY_LIBS))
+	MY_LIBS:=$(filter-out %xmlrpc_abyss %xmlrpc_server_abyss, $(MY_LIBS))
 else
 	# remove from compiling the code we have in the
 	# module for abyss server
@@ -90,7 +90,7 @@ endif
 
 
 DEFS+=$(MY_DEFS)
-LIBS=$(MY_LIBS)
+LIBS=$(MY_LIBS) -lpthread
 
 
 include ../../Makefile.modules
