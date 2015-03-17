@@ -738,12 +738,6 @@ mod_init(void)
 	unsigned short avp_flags;
 	str s;
 
-	if(register_mi_mod(exports.name, mi_cmds)!=0)
-	{
-		LM_ERR("failed to register MI commands\n");
-		return -1;
-	}
-
 	/* any rtpengine configured? */
 	if(rtpe_set_list)
 		default_rtpe_set = select_rtpe_set(DEFAULT_RTPE_SET_ID);
