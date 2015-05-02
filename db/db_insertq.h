@@ -92,7 +92,7 @@ inline int ql_flush_rows(db_func_t *dbf,db_con_t *conn,query_list_t *entry);
 		lock_release((entry)->lock); \
 	} while (0) 
 
-inline void cleanup_rows(db_val_t **rows);
+extern inline void cleanup_rows(db_val_t **rows);
 void handle_ql_shutdown(void);
 
 #endif
