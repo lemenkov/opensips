@@ -213,10 +213,10 @@ set_flt:
 		case SQLT_AFC:		/* Ansi fixed char */
 		case SQLT_AVC:		/* Ansi Var char */
 //		case SQLT_RID:		/* rowid */
-			LM_DBG("use DB_STR result type\n");
-			RES_TYPES(_r)[i] = DB_STR;
+			LM_DBG("use DB_STRING result type\n");
+			RES_TYPES(_r)[i] = DB_STRING;
 dyn_str:
-			dtype = SQLT_CHR;
+			dtype = SQLT_STR;
 			len = 0; /* DATA_SIZE is ub2 */
 			status = OCIAttrGet(param, OCI_DTYPE_PARAM,
 				(dvoid**)(dvoid*)&len, NULL, OCI_ATTR_DATA_SIZE,
