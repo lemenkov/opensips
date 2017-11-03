@@ -216,7 +216,7 @@ set_flt:
 			LM_DBG("use DB_STRING result type\n");
 			RES_TYPES(_r)[i] = DB_STRING;
 dyn_str:
-			dtype = SQLT_CHR;
+			dtype = SQLT_STR;
 			len = 0; /* DATA_SIZE is ub2 */
 			status = OCIAttrGet(param, OCI_DTYPE_PARAM,
 				(dvoid**)(dvoid*)&len, NULL, OCI_ATTR_DATA_SIZE,
