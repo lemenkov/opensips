@@ -298,7 +298,7 @@ modparam("dialog", "dlg_extra_hdrs", "Hint: credit expired\r\n")
 		</example>
 	</section>
 
-	<section>
+	<section id="dlg-match-mode-id">
 		<title><varname>dlg_match_mode</varname> (integer)</title>
 		<para>
 		How the seqential requests should be matched against the known dialogs.
@@ -1435,7 +1435,7 @@ create_dialog("B");
 		By default, the function tries to use (for dialog matching) the DID
 		(Dialog ID) from Route header and also falls back to SIP-wise matching. 
 		This behavior may be changed by providing it with a given matching mode
-		string (see <xref linkend="param_dlg_match_mode"/> for possible values of
+		string (see <xref linkend="dlg-match-mode-id"/> for possible values of
 		the parameter).
 		</para>
 		<para>
