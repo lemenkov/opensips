@@ -47,6 +47,7 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "../../async.h"
 #include "../../str.h"
 #include "../../flags.h"
 #include "../../sr_module.h"
@@ -254,6 +255,12 @@ static const str stat_maps[] = {
 	[STAT_PACKETLOSS_MAX_AT]	= str_init("packetloss-max-at")
 };
 
+static int rtpengine_offer_af(struct sip_msg *msg, async_ctx *ctx, str *flags, pv_spec_t *spvar,
+		pv_spec_t *bpvar, str *body);
+static int rtpengine_answer_af(struct sip_msg *msg, async_ctx *ctx, str *flags, pv_spec_t *spvar,
+		pv_spec_t *bpvar, str *body);
+static int rtpengine_delete_af(struct sip_msg* msg, async_ctx *ctx, str *flags, pv_spec_t *spvar);
+
 static char *gencookie();
 static int rtpe_test(struct rtpe_node*, int, int);
 static int start_recording_f(struct sip_msg* msg, str *flags, pv_spec_t *spvar);
@@ -359,6 +366,23 @@ static struct tm_binds tmb;
 static struct dlg_binds dlgb;
 
 static pv_elem_t *extra_id_pv = NULL;
+
+static acmd_export_t acmds[] = {
+	{"rtpengine_offer", (acmd_function)rtpengine_offer_af, {
+		{CMD_PARAM_STR | CMD_PARAM_OPT, 0, 0},
+		{CMD_PARAM_VAR | CMD_PARAM_OPT, 0, 0},
+		{CMD_PARAM_VAR | CMD_PARAM_OPT, 0, 0},
+		{CMD_PARAM_STR | CMD_PARAM_OPT, 0, 0}, {0,0,0}}},
+	{"rtpengine_answer", (acmd_function)rtpengine_answer_af, {
+		{CMD_PARAM_STR | CMD_PARAM_OPT, 0, 0},
+		{CMD_PARAM_VAR | CMD_PARAM_OPT, 0, 0},
+		{CMD_PARAM_VAR | CMD_PARAM_OPT, 0, 0},
+		{CMD_PARAM_STR | CMD_PARAM_OPT, 0, 0}, {0,0,0}}},
+	{"rtpengine_delete", (acmd_function)rtpengine_delete_af, {
+		{CMD_PARAM_STR | CMD_PARAM_OPT, 0, 0},
+		{CMD_PARAM_VAR | CMD_PARAM_OPT, 0, 0}, {0,0,0}}},
+	{0, 0, {{0, 0, 0}}}
+};
 
 static cmd_export_t cmds[] = {
 	{"rtpengine_use_set", (cmd_function)set_rtpengine_set_f, {
@@ -682,7 +706,7 @@ struct module_exports exports = {
 	0,				 /* load function */
 	&deps,           /* OpenSIPS module dependencies */
 	cmds,
-	0,
+	acmds,
 	params,
 	0,           /* exported statistics */
 	mi_cmds,     /* exported MI functions */
@@ -2577,6 +2601,30 @@ static int
 rtpengine_delete_f(struct sip_msg* msg, str *flags, pv_spec_t *spvar)
 {
 	return rtpengine_delete(msg, flags, spvar);
+}
+
+static int
+rtpengine_offer_af(struct sip_msg *msg, async_ctx *ctx, str *flags, pv_spec_t *spvar, pv_spec_t *bpvar, str *body)
+{
+	// FIXME
+	LM_ERR("Async rtpengine_offer\n");
+	return -1;
+}
+
+static int
+rtpengine_answer_af(struct sip_msg *msg, async_ctx *ctx, str *flags, pv_spec_t *spvar, pv_spec_t *bpvar, str *body)
+{
+	// FIXME
+	LM_ERR("Async rtpengine_answer\n");
+	return -1;
+}
+
+static int
+rtpengine_delete_af(struct sip_msg *msg, async_ctx *ctx, str *flags, pv_spec_t *spvar)
+{
+	// FIXME
+	LM_ERR("Async rtpengine_delete\n");
+	return -1;
 }
 
 /* This function assumes p points to a line of requested type. */
