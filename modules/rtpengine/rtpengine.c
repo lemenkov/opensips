@@ -2686,7 +2686,8 @@ rtpengine_offer_answer(struct sip_msg *msg, str *flags,
 {
 	bencode_buffer_t bencbuf;
 	bencode_item_t *dict;
-	str oldbody, newbody;
+	str oldbody = { 0, 0 };
+	str newbody;
 	struct lump *anchor;
 	pv_value_t val;
 
