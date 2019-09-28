@@ -2936,9 +2936,14 @@ rtpengine_answer_af(struct sip_msg *msg, async_ctx *ctx, str *flags, pv_spec_t *
 static int
 rtpengine_delete_af(struct sip_msg *msg, async_ctx *ctx, str *flags, pv_spec_t *spvar)
 {
-	// FIXME
-	LM_ERR("Async rtpengine_delete\n");
-	return -1;
+	LM_DBG("Async rtpengine_delete\n");
+
+	bencode_buffer_t bencbuf;
+
+	if (set_rtpengine_set_from_avp(msg) == -1)
+		return -1;
+
+	return rtpe_function_call_async(&bencbuf, msg, ctx, OP_DELETE, flags, NULL, spvar, NULL);
 }
 
 /* This function assumes p points to a line of requested type. */
