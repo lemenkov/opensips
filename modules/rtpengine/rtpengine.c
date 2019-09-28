@@ -214,6 +214,15 @@ typedef struct rtpe_set_link {
 	} v;
 } rtpe_set_link_t;
 
+typedef struct rtpe_async_param_ {
+	bencode_buffer_t *bencbuf;
+	enum rtpe_operation op;
+	struct rtpe_node *node;
+	pv_spec_t *spvar;
+	pv_spec_t *bpvar;
+} rtpe_async_param;
+
+
 static const char *command_strings[] = {
 	[OP_OFFER]		= "offer",
 	[OP_ANSWER]		= "answer",
@@ -2105,6 +2114,311 @@ static bencode_item_t *rtpe_function_call_process(bencode_buffer_t *bencbuf, cha
 	}
 
 	return resp;
+}
+
+static int start_async_send_rtpe_command(struct rtpe_node *node, bencode_item_t *dict, enum async_ret_code *out_fd)
+{
+	struct sockaddr_un addr;
+	int fd, len, vcnt;
+	static char buf[0x10000];
+	struct pollfd fds[1];
+	struct iovec *v;
+
+	v = bencode_iovec(dict, &vcnt, 1, 0);
+	if (!v) {
+		LM_ERR("error converting bencode to iovec\n");
+		goto error;
+	}
+
+	len = 0;
+	if (node->rn_umode == 0) {
+		memset(&addr, 0, sizeof(addr));
+		addr.sun_family = AF_LOCAL;
+		strncpy(addr.sun_path, node->rn_address,
+		    sizeof(addr.sun_path) - 1);
+#ifdef HAVE_SOCKADDR_SA_LEN
+		addr.sun_len = strlen(addr.sun_path);
+#endif
+
+		fd = socket(AF_LOCAL, SOCK_STREAM, 0);
+		if (fd < 0) {
+			LM_ERR("can't create socket\n");
+			goto badproxy;
+		}
+		if (connect(fd, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
+			close(fd);
+			LM_ERR("can't connect to RTP proxy\n");
+			goto badproxy;
+		}
+
+		do {
+			len = writev(fd, v + 1, vcnt);
+		} while (len == -1 && errno == EINTR);
+		if (len <= 0) {
+			close(fd);
+			LM_ERR("can't send command to a RTP proxy (%d:%s)\n",
+					errno, strerror(errno));
+			goto badproxy;
+		}
+		*out_fd = fd;
+	} else {
+		if (rtpe_socks[node->idx] != -1) {
+			fds[0].fd = rtpe_socks[node->idx];
+			fds[0].events = POLLIN;
+			fds[0].revents = 0;
+			// Drain input buffer //
+			while ((poll(fds, 1, 0) == 1) &&
+				((fds[0].revents & POLLIN) != 0)) {
+				if (fds[0].revents & (POLLERR|POLLNVAL|POLLHUP)) {
+					LM_WARN("error on rtpengine socket %d!\n", rtpe_socks[node->idx]);
+					RTPE_IO_ERROR_CLOSE(rtpe_socks[node->idx]);
+					break;
+				}
+				fds[0].revents = 0;
+				if (recv(rtpe_socks[node->idx], buf, sizeof(buf) - 1, 0) < 0 &&
+						errno != EINTR) {
+					LM_WARN("error while draining rtpengine %d!\n", errno);
+					RTPE_IO_ERROR_CLOSE(rtpe_socks[node->idx]);
+					break;
+				}
+			}
+		}
+		v[0].iov_base = gencookie();
+		v[0].iov_len = strlen(v[0].iov_base);
+		// FIXME only one repetition
+		//for (i = 0; i < rtpengine_retr; i++) {
+			if (rtpe_socks[node->idx] == -1 && !rtpengine_connect_node(node)) {
+				LM_ERR("cannot reconnect RTP engine socket!\n");
+				goto badproxy;
+			}
+			do {
+				len = writev(rtpe_socks[node->idx], v, vcnt + 1);
+			} while (len == -1 && (errno == EINTR || errno == ENOBUFS || errno == EMSGSIZE));
+			if (len <= 0) {
+				LM_ERR("can't send command to a RTP proxy (%d:%s)\n",
+						errno, strerror(errno));
+				RTPE_IO_ERROR_CLOSE(rtpe_socks[node->idx]);
+				goto badproxy;
+			}
+		// FIXME only one repetition
+		//}
+		//if (i == rtpengine_retr) {
+		//	LM_ERR("timeout waiting reply from a RTP proxy\n");
+		//	goto badproxy;
+		//}
+		*out_fd = rtpe_socks[node->idx];
+	}
+
+	return 1;
+badproxy:
+	LM_ERR("proxy <%s> does not respond, disable it\n", node->rn_url.s);
+	node->rn_disabled = 1;
+	node->rn_recheck_ticks = get_ticks() + rtpengine_disable_tout;
+error:
+	*out_fd = ASYNC_NO_IO;
+	return -1;
+}
+
+enum async_ret_code resume_async_send_rtpe_command(int fd, struct sip_msg *msg, void *_param)
+{
+	int len = 0;
+	static char buf[0x10000];
+	struct pollfd fds[1];
+	bencode_item_t *dict;
+	// FIXME check this
+	//str oldbody, newbody;
+	str oldbody = { 0, 0 };
+	str newbody;
+	struct lump *anchor;
+	pv_value_t val;
+	struct rtpe_ctx *ctx;
+
+	rtpe_async_param *param = (rtpe_async_param *)_param;
+
+	if (param->node->rn_umode == 0) {
+		do {
+			len = read(fd, buf, sizeof(buf) - 1);
+		} while (len == -1 && errno == EINTR);
+		close(fd);
+		if (len <= 0) {
+			LM_ERR("can't read reply from a RTP proxy\n");
+			goto error;
+		}
+	}
+	else {
+		fds[0].fd = fd;
+		fds[0].events = POLLIN;
+		fds[0].revents = 0;
+		while ((poll(fds, 1, rtpengine_tout * 1000) == 1) && (fds[0].revents & POLLIN) != 0) {
+			do {
+				len = recv(fd, buf, sizeof(buf)-1, 0);
+			} while (len == -1 && errno == EINTR);
+			if (len <= 0) {
+				LM_ERR("can't read reply from a RTP proxy\n");
+				RTPE_IO_ERROR_CLOSE(param->node->idx);
+				goto error;
+			}
+			fds[0].revents = 0;
+		}
+	}
+
+	/* store the value of the selected node */
+	if (param->spvar) {
+		memset(&val, 0, sizeof(pv_value_t));
+		val.flags = PV_VAL_STR;
+		val.rs = param->node->rn_url;
+		if(pv_set_value(msg, param->spvar, (int)EQ_T, &val)<0)
+			LM_ERR("setting rtpengine pvar failed\n");
+	}
+
+	//// process reply ////
+	dict = rtpe_function_call_process(param->bencbuf, buf, len);
+	if(!dict) {
+		goto error;
+	}
+
+	if ((param->op == OP_OFFER) || (param->op == OP_ANSWER)){
+		if (!bencode_dictionary_get_str_dup(dict, "sdp", &newbody)) {
+			LM_DBG("failed to extract sdp body from proxy reply\n");
+		}
+		else {
+			/* if we have a variable to store into, use it */
+			if (param->bpvar) {
+				memset(&val, 0, sizeof(pv_value_t));
+				val.flags = PV_VAL_STR;
+				val.rs = newbody;
+				if(pv_set_value(msg, param->bpvar, (int)EQ_T, &val)<0)
+					LM_ERR("setting PV failed\n");
+				pkg_free(newbody.s);
+			} else {
+				// (extract SDP first) //
+				if (extract_body(msg, &oldbody) == -1) {
+					LM_ERR("can't extract body from the message\n");
+					goto error;
+				}
+				/* otherwise directly set the body of the message */
+				anchor = del_lump(msg, oldbody.s - msg->buf, oldbody.len, 0);
+				if (!anchor) {
+					LM_ERR("del_lump failed\n");
+					goto error;
+				}
+				if (!insert_new_lump_after(anchor, newbody.s, newbody.len, 0)) {
+					LM_ERR("insert_new_lump_after failed\n");
+					goto error;
+				}
+			}
+
+		}
+	}
+
+	if (param->op == OP_DELETE && rtpengine_stats_used) {
+		/* if statistics are to be used, store stats in the ctx, if possible */
+		if ((ctx = rtpe_ctx_get())) {
+			if (ctx->stats)
+				rtpe_stats_free(ctx->stats); /* release the buffer */
+			else
+				ctx->stats = pkg_malloc(sizeof *ctx->stats);
+			if (ctx->stats) {
+				ctx->stats->buf = *(param->bencbuf);
+				ctx->stats->dict = dict;
+				ctx->stats->json.s = 0;
+				/* return here to prevent buffer from being freed */
+				return 1;
+			} else
+				LM_WARN("no more pkg memory - cannot cache stats!\n");
+		}
+	}
+
+	bencode_buffer_free(param->bencbuf);
+	return 1;
+error:
+	bencode_buffer_free(param->bencbuf);
+	return -1;
+}
+
+static int rtpe_function_call_async(bencode_buffer_t *bencbuf, struct sip_msg *msg, async_ctx *ctx,
+	enum rtpe_operation op, str *flags_str, str *body_in, pv_spec_t *spvar, pv_spec_t *bpvar)
+{
+	str oldbody;
+	bencode_item_t *dict;
+	struct rtpe_node *node;
+	struct rtpe_set *set;
+	int ret, read_fd;
+	rtpe_async_param *param;
+
+	param = pkg_malloc(sizeof *param);
+	if (!param) {
+		LM_ERR("no more shm\n");
+		goto error;
+	}
+	memset(param, '\0', sizeof *param);
+
+	//// get & init basic stuff needed ////
+
+	if (!body_in) {
+		if (extract_body(msg, &oldbody) == -1) {
+			LM_ERR("can't extract body from the message\n");
+			goto error;
+		}
+	} else {
+		oldbody = *body_in;
+	}
+
+	dict = rtpe_function_call_prepare(bencbuf, msg, op, flags_str, &oldbody);
+	if(!dict)
+		goto error;
+
+	//// send it out ////
+
+	if ( (set=rtpe_ctx_set_get())==NULL )
+		set = *default_rtpe_set;
+
+	RTPE_START_READ();
+	// FIXME only one RTP node is used
+//	do {
+		// CallID was parsed earlier in rtpe_function_call_prepare
+		node = select_rtpe_node(msg->callid->body, 1, set);
+		if (!node) {
+			LM_ERR("no available proxies\n");
+			RTPE_STOP_READ();
+			goto error;
+		}
+
+		ret = start_async_send_rtpe_command(node, dict, &read_fd);
+
+	// FIXME only one RTP node is used
+//	} while (cp == NULL);
+	RTPE_STOP_READ();
+	LM_DBG("async proxy reply: %d\n", ret);
+
+	/* error occurred; no transfer done. FIXME Try another node? */
+	if (read_fd == ASYNC_NO_IO) {
+		ctx->resume_f = NULL;
+		ctx->resume_param = NULL;
+		return ret;
+
+	/* no need for async - transfer already completed! */
+	} else if (read_fd == ASYNC_SYNC) {
+		async_status = ASYNC_SYNC;
+		return ret;
+	}
+
+	param->bencbuf = bencbuf;
+	param->op = op;
+	param->node = node;
+	param->bpvar = bpvar;
+	param->spvar = spvar;
+
+	ctx->resume_f = resume_async_send_rtpe_command;
+	ctx->resume_param = param;
+
+	/* async started with success */
+	async_status = read_fd;
+	return 1;
+
+error:
+	bencode_buffer_free(bencbuf);
+	return -1;
 }
 
 static bencode_item_t *rtpe_function_call(bencode_buffer_t *bencbuf, struct sip_msg *msg,
