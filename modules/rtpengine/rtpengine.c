@@ -2288,7 +2288,7 @@ badproxy:
 	node->rn_recheck_ticks = get_ticks() + rtpengine_disable_tout;
 
 	return NULL;
-#undef RTPE_IO_ERROR_CLOSE
+//#undef RTPE_IO_ERROR_CLOSE
 }
 
 /*
