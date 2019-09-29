@@ -2927,9 +2927,14 @@ rtpengine_delete_f(struct sip_msg* msg, str *flags, pv_spec_t *spvar)
 static int
 rtpengine_offer_af(struct sip_msg *msg, async_ctx *ctx, str *flags, pv_spec_t *spvar, pv_spec_t *bpvar, str *body)
 {
-	// FIXME
-	LM_ERR("Async rtpengine_offer\n");
-	return -1;
+	LM_DBG("Async rtpengine_offer\n");
+
+	bencode_buffer_t bencbuf;
+
+	if (set_rtpengine_set_from_avp(msg) == -1)
+	    return -1;
+
+	return rtpe_function_call_async(&bencbuf, msg, ctx, OP_OFFER, flags, body, spvar, bpvar);
 }
 
 static int
