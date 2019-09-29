@@ -2933,9 +2933,18 @@ rtpengine_offer_af(struct sip_msg *msg, async_ctx *ctx, str *flags, pv_spec_t *s
 static int
 rtpengine_answer_af(struct sip_msg *msg, async_ctx *ctx, str *flags, pv_spec_t *spvar, pv_spec_t *bpvar, str *body)
 {
-	// FIXME
-	LM_ERR("Async rtpengine_answer\n");
-	return -1;
+	LM_DBG("Async rtpengine_answer\n");
+
+	bencode_buffer_t bencbuf;
+
+	if (set_rtpengine_set_from_avp(msg) == -1)
+	    return -1;
+
+	if (msg->first_line.type == SIP_REQUEST)
+		if (msg->first_line.u.request.method_value != METHOD_ACK)
+			return -1;
+
+	return rtpe_function_call_async(&bencbuf, msg, ctx, OP_ANSWER, flags, body, spvar, bpvar);
 }
 
 static int
