@@ -20,7 +20,7 @@
 */
 
 #include <Python.h>
-#include "structmember.h"
+#include <structmember.h>
 
 #include "../../action.h"
 #include "../../mem/mem.h"
