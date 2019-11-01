@@ -44,6 +44,7 @@
 #include <poll.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -1875,35 +1876,33 @@ error:
 }
 #undef BCHECK
 
-static bencode_item_t *rtpe_function_call_prepare(bencode_buffer_t *bencbuf, struct sip_msg *msg,
+static bool rtpe_function_call_prepare(bencode_buffer_t *bencbuf, struct sip_msg *msg, struct ng_flags_parse *png_flags,
 	enum rtpe_operation op, str *flags_str, str *body_in)
 {
-	struct ng_flags_parse ng_flags;
-	bencode_item_t *item, *dict;
+	struct ng_flags_parse ng_flags = *png_flags;
+	bencode_item_t *item;
 	str viabranch;
 	int ret;
 	str flags_nt = {0,0};
-
-	memset(&ng_flags, 0, sizeof(ng_flags));
 
 	// FIXME we have to init it before callid, to_tag, from_tag. If we
 	// throw NULL out from this fun we will go right into
 	// bencode_buffer_free(...) so it has to be initialized.
 	if (bencode_buffer_init(bencbuf)) {
 		LM_ERR("could not initialize bencode_buffer_t\n");
-		return NULL;
+		return false;
 	}
 	if (get_callid(msg, &ng_flags.call_id) == -1 || ng_flags.call_id.len == 0) {
 		LM_ERR("can't get Call-Id field\n");
-		return NULL;
+		return false;
 	}
 	if (get_to_tag(msg, &ng_flags.to_tag) == -1) {
 		LM_ERR("can't get To tag\n");
-		return NULL;
+		return false;
 	}
 	if (get_from_tag(msg, &ng_flags.from_tag) == -1 || ng_flags.from_tag.len == 0) {
 		LM_ERR("can't get From tag\n");
-		return NULL;
+		return false;
 	}
 	ng_flags.dict = bencode_dictionary(bencbuf);
 
@@ -1922,11 +1921,11 @@ static bencode_item_t *rtpe_function_call_prepare(bencode_buffer_t *bencbuf, str
 
 	if (flags_str && pkg_nt_str_dup(&flags_nt, flags_str) < 0) {
 		LM_ERR("No more pkg mem\n");
-		return NULL;
+		return false;
 	}
 
 	if (parse_flags(&ng_flags, msg, &op, flags_nt.s))
-		return NULL;
+		return false;
 
 	/* only add those if any flags were given at all */
 	if (ng_flags.direction && ng_flags.direction->child)
@@ -1952,7 +1951,7 @@ static bencode_item_t *rtpe_function_call_prepare(bencode_buffer_t *bencbuf, str
 			ret = -1;
 		if (ret == -1 || viabranch.len == 0) {
 			LM_ERR("can't get Via branch/extra ID\n");
-			return NULL;
+			return false;
 		}
 		bencode_dictionary_add_str(ng_flags.dict, "via-branch", &viabranch);
 	}
@@ -1980,7 +1979,7 @@ static bencode_item_t *rtpe_function_call_prepare(bencode_buffer_t *bencbuf, str
 	else {
 		if (!ng_flags.to_tag.s || !ng_flags.to_tag.len) {
 			LM_ERR("No to-tag present\n");
-			return NULL;
+			return false;
 		}
 		bencode_dictionary_add_str(ng_flags.dict, "from-tag", &ng_flags.to_tag);
 		bencode_dictionary_add_str(ng_flags.dict, "to-tag", &ng_flags.from_tag);
@@ -1991,17 +1990,14 @@ static bencode_item_t *rtpe_function_call_prepare(bencode_buffer_t *bencbuf, str
 	// FIXME Wth?
 	if (bencbuf->error) {
 		LM_ERR("out of memory - bencode failed\n");
-		return NULL;
+		return false;
 	}
 
 	// FIXME leakage. We could throw NULL earlier.
 	if (flags_nt.s)
 		pkg_free(flags_nt.s);
 
-	memmove(dict, &(ng_flags.dict), sizeof(ng_flags.dict));
-
-	// FIXME leakage. We have to free it later.
-	return dict;
+	return true;
 }
 
 static bencode_item_t *rtpe_function_call_process(bencode_buffer_t *bencbuf, char* cp, int ret)
@@ -2249,12 +2245,14 @@ error:
 static int rtpe_function_call_async(bencode_buffer_t *bencbuf, struct sip_msg *msg, async_ctx *ctx,
 	enum rtpe_operation op, str *flags_str, str *body_in, pv_spec_t *spvar, pv_spec_t *bpvar)
 {
+	struct ng_flags_parse ng_flags;
 	str oldbody;
-	bencode_item_t *dict;
 	struct rtpe_node *node;
 	struct rtpe_set *set;
 	int ret, read_fd;
 	rtpe_async_param *param;
+
+	memset(&ng_flags, 0, sizeof(ng_flags));
 
 	param = pkg_malloc(sizeof *param);
 	if (!param) {
@@ -2274,8 +2272,7 @@ static int rtpe_function_call_async(bencode_buffer_t *bencbuf, struct sip_msg *m
 		oldbody = *body_in;
 	}
 
-	dict = rtpe_function_call_prepare(bencbuf, msg, op, flags_str, &oldbody);
-	if(!dict)
+	if(!rtpe_function_call_prepare(bencbuf, msg, &ng_flags, op, flags_str, &oldbody))
 		goto error;
 
 	//// send it out ////
@@ -2294,7 +2291,7 @@ static int rtpe_function_call_async(bencode_buffer_t *bencbuf, struct sip_msg *m
 			goto error;
 		}
 
-		ret = start_async_send_rtpe_command(node, dict, &read_fd);
+		ret = start_async_send_rtpe_command(node, ng_flags.dict, &read_fd);
 
 	// FIXME only one RTP node is used
 //	} while (cp == NULL);
@@ -2335,16 +2332,18 @@ error:
 static bencode_item_t *rtpe_function_call(bencode_buffer_t *bencbuf, struct sip_msg *msg,
 	enum rtpe_operation op, str *flags_str, str *body_in, pv_spec_t *spvar)
 {
-	bencode_item_t *dict, *resp;
+	struct ng_flags_parse ng_flags;
+	bencode_item_t *resp;
 	int ret;
 	struct rtpe_node *node;
 	struct rtpe_set *set;
 	char *cp;
 	pv_value_t val;
 
+	memset(&ng_flags, 0, sizeof(ng_flags));
+
 	/*** get & init basic stuff needed ***/
-	dict = rtpe_function_call_prepare(bencbuf, msg, op, flags_str, body_in);
-	if (!dict)
+	if (!rtpe_function_call_prepare(bencbuf, msg, &ng_flags, op, flags_str, body_in))
 		goto error;
 
 	/*** send it out ***/
@@ -2362,7 +2361,7 @@ static bencode_item_t *rtpe_function_call(bencode_buffer_t *bencbuf, struct sip_
 			goto error;
 		}
 
-		cp = send_rtpe_command(node, dict, &ret);
+		cp = send_rtpe_command(node, ng_flags.dict, &ret);
 	} while (cp == NULL);
 	RTPE_STOP_READ();
 	LM_DBG("proxy reply: %.*s\n", ret, cp);
