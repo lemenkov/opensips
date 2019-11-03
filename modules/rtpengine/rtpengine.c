@@ -1876,10 +1876,9 @@ error:
 }
 #undef BCHECK
 
-static bool rtpe_function_call_prepare(bencode_buffer_t *bencbuf, struct sip_msg *msg, struct ng_flags_parse *png_flags,
+static bool rtpe_function_call_prepare(bencode_buffer_t *bencbuf, struct sip_msg *msg, struct ng_flags_parse *ng_flags,
 	enum rtpe_operation op, str *flags_str, str *body_in)
 {
-	struct ng_flags_parse ng_flags = *png_flags;
 	bencode_item_t *item;
 	str viabranch;
 	int ret;
@@ -1892,32 +1891,32 @@ static bool rtpe_function_call_prepare(bencode_buffer_t *bencbuf, struct sip_msg
 		LM_ERR("could not initialize bencode_buffer_t\n");
 		return false;
 	}
-	if (get_callid(msg, &ng_flags.call_id) == -1 || ng_flags.call_id.len == 0) {
+	if (get_callid(msg, &ng_flags->call_id) == -1 || ng_flags->call_id.len == 0) {
 		LM_ERR("can't get Call-Id field\n");
 		return false;
 	}
-	if (get_to_tag(msg, &ng_flags.to_tag) == -1) {
+	if (get_to_tag(msg, &ng_flags->to_tag) == -1) {
 		LM_ERR("can't get To tag\n");
 		return false;
 	}
-	if (get_from_tag(msg, &ng_flags.from_tag) == -1 || ng_flags.from_tag.len == 0) {
+	if (get_from_tag(msg, &ng_flags->from_tag) == -1 || ng_flags->from_tag.len == 0) {
 		LM_ERR("can't get From tag\n");
 		return false;
 	}
-	ng_flags.dict = bencode_dictionary(bencbuf);
+	ng_flags->dict = bencode_dictionary(bencbuf);
 
 	if (op == OP_OFFER || op == OP_ANSWER) {
-		ng_flags.flags = bencode_list(bencbuf);
-		ng_flags.direction = bencode_list(bencbuf);
-		ng_flags.replace = bencode_list(bencbuf);
-		ng_flags.rtcp_mux = bencode_list(bencbuf);
+		ng_flags->flags = bencode_list(bencbuf);
+		ng_flags->direction = bencode_list(bencbuf);
+		ng_flags->replace = bencode_list(bencbuf);
+		ng_flags->rtcp_mux = bencode_list(bencbuf);
 
-		bencode_dictionary_add_str(ng_flags.dict, "sdp", body_in);
+		bencode_dictionary_add_str(ng_flags->dict, "sdp", body_in);
 	}
 
 	/*** parse flags & build dictionary ***/
 
-	ng_flags.to = (op == OP_DELETE) ? 0 : 1;
+	ng_flags->to = (op == OP_DELETE) ? 0 : 1;
 
 	if (flags_str && pkg_nt_str_dup(&flags_nt, flags_str) < 0) {
 		LM_ERR("No more pkg mem\n");
@@ -1928,24 +1927,24 @@ static bool rtpe_function_call_prepare(bencode_buffer_t *bencbuf, struct sip_msg
 		return false;
 
 	/* only add those if any flags were given at all */
-	if (ng_flags.direction && ng_flags.direction->child)
-		bencode_dictionary_add(ng_flags.dict, "direction", ng_flags.direction);
-	if (ng_flags.flags && ng_flags.flags->child)
-		bencode_dictionary_add(ng_flags.dict, "flags", ng_flags.flags);
-	if (ng_flags.replace && ng_flags.replace->child)
-		bencode_dictionary_add(ng_flags.dict, "replace", ng_flags.replace);
-	if ((ng_flags.transport & 0x100))
-		bencode_dictionary_add_string(ng_flags.dict, "transport-protocol",
-				transports[ng_flags.transport & 0x007]);
-	if (ng_flags.rtcp_mux && ng_flags.rtcp_mux->child)
-		bencode_dictionary_add(ng_flags.dict, "rtcp-mux", ng_flags.rtcp_mux);
+	if (ng_flags->direction && ng_flags->direction->child)
+		bencode_dictionary_add(ng_flags->dict, "direction", ng_flags->direction);
+	if (ng_flags->flags && ng_flags->flags->child)
+		bencode_dictionary_add(ng_flags->dict, "flags", ng_flags->flags);
+	if (ng_flags->replace && ng_flags->replace->child)
+		bencode_dictionary_add(ng_flags->dict, "replace", ng_flags->replace);
+	if ((ng_flags->transport & 0x100))
+		bencode_dictionary_add_string(ng_flags->dict, "transport-protocol",
+				transports[ng_flags->transport & 0x007]);
+	if (ng_flags->rtcp_mux && ng_flags->rtcp_mux->child)
+		bencode_dictionary_add(ng_flags->dict, "rtcp-mux", ng_flags->rtcp_mux);
 
-	bencode_dictionary_add_str(ng_flags.dict, "call-id", &ng_flags.call_id);
+	bencode_dictionary_add_str(ng_flags->dict, "call-id", &ng_flags->call_id);
 
-	if (ng_flags.via) {
-		if (ng_flags.via == 1 || ng_flags.via == 2)
-			ret = get_via_branch(msg, ng_flags.via, &viabranch);
-		else if (ng_flags.via == -1 && extra_id_pv)
+	if (ng_flags->via) {
+		if (ng_flags->via == 1 || ng_flags->via == 2)
+			ret = get_via_branch(msg, ng_flags->via, &viabranch);
+		else if (ng_flags->via == -1 && extra_id_pv)
 			ret = get_extra_id(msg, &viabranch);
 		else
 			ret = -1;
@@ -1953,11 +1952,11 @@ static bool rtpe_function_call_prepare(bencode_buffer_t *bencbuf, struct sip_msg
 			LM_ERR("can't get Via branch/extra ID\n");
 			return false;
 		}
-		bencode_dictionary_add_str(ng_flags.dict, "via-branch", &viabranch);
+		bencode_dictionary_add_str(ng_flags->dict, "via-branch", &viabranch);
 	}
 
 	item = bencode_list(bencbuf);
-	bencode_dictionary_add(ng_flags.dict, "received-from", item);
+	bencode_dictionary_add(ng_flags->dict, "received-from", item);
 	bencode_list_add_string(item, (msg->rcv.src_ip.af == AF_INET) ? "IP4" : (
 		(msg->rcv.src_ip.af == AF_INET6) ? "IP6" :
 		"?"
@@ -1969,23 +1968,23 @@ static bool rtpe_function_call_prepare(bencode_buffer_t *bencbuf, struct sip_msg
 		|| (msg->first_line.type == SIP_REPLY && op == OP_ANSWER)
 		|| (msg->first_line.type == SIP_REPLY && op == OP_STOP_MEDIA))
 	{
-		bencode_dictionary_add_str(ng_flags.dict, "from-tag", &ng_flags.from_tag);
+		bencode_dictionary_add_str(ng_flags->dict, "from-tag", &ng_flags->from_tag);
 		if (op != OP_START_MEDIA && op != OP_STOP_MEDIA) {
 			/* no need of to-tag if we are just playing media */
-			if (ng_flags.to && ng_flags.to_tag.s && ng_flags.to_tag.len)
-				bencode_dictionary_add_str(ng_flags.dict, "to-tag", &ng_flags.to_tag);
+			if (ng_flags->to && ng_flags->to_tag.s && ng_flags->to_tag.len)
+				bencode_dictionary_add_str(ng_flags->dict, "to-tag", &ng_flags->to_tag);
 		}
 	}
 	else {
-		if (!ng_flags.to_tag.s || !ng_flags.to_tag.len) {
+		if (!ng_flags->to_tag.s || !ng_flags->to_tag.len) {
 			LM_ERR("No to-tag present\n");
 			return false;
 		}
-		bencode_dictionary_add_str(ng_flags.dict, "from-tag", &ng_flags.to_tag);
-		bencode_dictionary_add_str(ng_flags.dict, "to-tag", &ng_flags.from_tag);
+		bencode_dictionary_add_str(ng_flags->dict, "from-tag", &ng_flags->to_tag);
+		bencode_dictionary_add_str(ng_flags->dict, "to-tag", &ng_flags->from_tag);
 	}
 
-	bencode_dictionary_add_string(ng_flags.dict, "command", command_strings[op]);
+	bencode_dictionary_add_string(ng_flags->dict, "command", command_strings[op]);
 
 	// FIXME Wth?
 	if (bencbuf->error) {
