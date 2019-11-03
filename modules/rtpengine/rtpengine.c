@@ -1923,7 +1923,7 @@ static bool rtpe_function_call_prepare(bencode_buffer_t *bencbuf, struct sip_msg
 		return false;
 	}
 
-	if (parse_flags(&ng_flags, msg, &op, flags_nt.s))
+	if (parse_flags(ng_flags, msg, &op, flags_nt.s))
 		return false;
 
 	/* only add those if any flags were given at all */
