@@ -2324,7 +2324,7 @@ error:
 	return -1;
 }
 
-static int rtpe_function_call_async(bencode_buffer_t *bencbuf, struct sip_msg *msg, async_ctx *ctx,
+static int rtpe_function_call_async(struct sip_msg *msg, async_ctx *ctx,
 	enum rtpe_operation op, str *flags_str, str *body_in, pv_spec_t *spvar, pv_spec_t *bpvar)
 {
 	struct ng_flags_parse ng_flags;
@@ -2334,6 +2334,7 @@ static int rtpe_function_call_async(bencode_buffer_t *bencbuf, struct sip_msg *m
 	int ret, read_fd;
 	rtpe_async_param *param;
 
+	bencode_buffer_t *bencbuf = pkg_malloc(sizeof(bencode_buffer_t));
 	memset(&ng_flags, 0, sizeof(ng_flags));
 
 	param = pkg_malloc(sizeof *param);
@@ -2925,28 +2926,16 @@ rtpengine_offer_af(struct sip_msg *msg, async_ctx *ctx, str *flags, pv_spec_t *s
 {
 	LM_DBG("Async rtpengine_offer\n");
 
-	bencode_buffer_t *bencbuf = pkg_malloc(sizeof(bencode_buffer_t));
-	if (bencode_buffer_init(bencbuf)) {
-		LM_ERR("could not initialized bencode_buffer_t\n");
-		return -1;
-	}
-
 	if (set_rtpengine_set_from_avp(msg) == -1)
 	    return -1;
 
-	return rtpe_function_call_async(bencbuf, msg, ctx, OP_OFFER, flags, body, spvar, bpvar);
+	return rtpe_function_call_async(msg, ctx, OP_OFFER, flags, body, spvar, bpvar);
 }
 
 static int
 rtpengine_answer_af(struct sip_msg *msg, async_ctx *ctx, str *flags, pv_spec_t *spvar, pv_spec_t *bpvar, str *body)
 {
 	LM_DBG("Async rtpengine_answer\n");
-
-	bencode_buffer_t *bencbuf = pkg_malloc(sizeof(bencode_buffer_t));
-	if (bencode_buffer_init(bencbuf)) {
-		LM_ERR("could not initialized bencode_buffer_t\n");
-		return -1;
-	}
 
 	if (set_rtpengine_set_from_avp(msg) == -1)
 	    return -1;
@@ -2955,19 +2944,13 @@ rtpengine_answer_af(struct sip_msg *msg, async_ctx *ctx, str *flags, pv_spec_t *
 		if (msg->first_line.u.request.method_value != METHOD_ACK)
 			return -1;
 
-	return rtpe_function_call_async(bencbuf, msg, ctx, OP_ANSWER, flags, body, spvar, bpvar);
+	return rtpe_function_call_async(msg, ctx, OP_ANSWER, flags, body, spvar, bpvar);
 }
 
 static int
 rtpengine_delete_af(struct sip_msg *msg, async_ctx *ctx, str *flags, pv_spec_t *spvar)
 {
 	LM_DBG("Async rtpengine_delete\n");
-
-	bencode_buffer_t *bencbuf = pkg_malloc(sizeof(bencode_buffer_t));
-	if (bencode_buffer_init(bencbuf)) {
-		LM_ERR("could not initialized bencode_buffer_t\n");
-		return -1;
-	}
 
 	if (set_rtpengine_set_from_avp(msg) == -1)
 		return -1;
