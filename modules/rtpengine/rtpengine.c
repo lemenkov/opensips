@@ -2932,12 +2932,16 @@ rtpengine_offer_af(struct sip_msg *msg, async_ctx *ctx, str *flags, pv_spec_t *s
 {
 	LM_DBG("Async rtpengine_offer\n");
 
-	bencode_buffer_t bencbuf;
+	bencode_buffer_t *bencbuf = pkg_malloc(sizeof(bencode_buffer_t));
+	if (bencode_buffer_init(bencbuf)) {
+		LM_ERR("could not initialized bencode_buffer_t\n");
+		return -1;
+	}
 
 	if (set_rtpengine_set_from_avp(msg) == -1)
 	    return -1;
 
-	return rtpe_function_call_async(&bencbuf, msg, ctx, OP_OFFER, flags, body, spvar, bpvar);
+	return rtpe_function_call_async(bencbuf, msg, ctx, OP_OFFER, flags, body, spvar, bpvar);
 }
 
 static int
@@ -2945,7 +2949,11 @@ rtpengine_answer_af(struct sip_msg *msg, async_ctx *ctx, str *flags, pv_spec_t *
 {
 	LM_DBG("Async rtpengine_answer\n");
 
-	bencode_buffer_t bencbuf;
+	bencode_buffer_t *bencbuf = pkg_malloc(sizeof(bencode_buffer_t));
+	if (bencode_buffer_init(bencbuf)) {
+		LM_ERR("could not initialized bencode_buffer_t\n");
+		return -1;
+	}
 
 	if (set_rtpengine_set_from_avp(msg) == -1)
 	    return -1;
@@ -2954,7 +2962,7 @@ rtpengine_answer_af(struct sip_msg *msg, async_ctx *ctx, str *flags, pv_spec_t *
 		if (msg->first_line.u.request.method_value != METHOD_ACK)
 			return -1;
 
-	return rtpe_function_call_async(&bencbuf, msg, ctx, OP_ANSWER, flags, body, spvar, bpvar);
+	return rtpe_function_call_async(bencbuf, msg, ctx, OP_ANSWER, flags, body, spvar, bpvar);
 }
 
 static int
@@ -2962,12 +2970,16 @@ rtpengine_delete_af(struct sip_msg *msg, async_ctx *ctx, str *flags, pv_spec_t *
 {
 	LM_DBG("Async rtpengine_delete\n");
 
-	bencode_buffer_t bencbuf;
+	bencode_buffer_t *bencbuf = pkg_malloc(sizeof(bencode_buffer_t));
+	if (bencode_buffer_init(bencbuf)) {
+		LM_ERR("could not initialized bencode_buffer_t\n");
+		return -1;
+	}
 
 	if (set_rtpengine_set_from_avp(msg) == -1)
 		return -1;
 
-	return rtpe_function_call_async(&bencbuf, msg, ctx, OP_DELETE, flags, NULL, spvar, NULL);
+	return rtpe_function_call_async(bencbuf, msg, ctx, OP_DELETE, flags, NULL, spvar, NULL);
 }
 
 /* This function assumes p points to a line of requested type. */
