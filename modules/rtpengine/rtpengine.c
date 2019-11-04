@@ -2964,7 +2964,7 @@ rtpengine_delete_af(struct sip_msg *msg, async_ctx *ctx, str *flags, pv_spec_t *
 	if (set_rtpengine_set_from_avp(msg) == -1)
 		return -1;
 
-	return rtpe_function_call_async(bencbuf, msg, ctx, OP_DELETE, flags, NULL, spvar, NULL);
+	return rtpe_function_call_async(msg, ctx, OP_DELETE, flags, NULL, spvar, NULL);
 }
 
 /* This function assumes p points to a line of requested type. */
