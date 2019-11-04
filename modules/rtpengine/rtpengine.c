@@ -2345,13 +2345,15 @@ static int rtpe_function_call_async(bencode_buffer_t *bencbuf, struct sip_msg *m
 
 	//// get & init basic stuff needed ////
 
-	if (!body_in) {
-		if (extract_body(msg, &oldbody) == -1) {
-			LM_ERR("can't extract body from the message\n");
-			goto error;
+	if (op != OP_DELETE) {
+		if (!body_in) {
+			if (extract_body(msg, &oldbody) == -1) {
+				LM_ERR("can't extract body from the message\n");
+				goto error;
+			}
+		} else {
+			oldbody = *body_in;
 		}
-	} else {
-		oldbody = *body_in;
 	}
 
 	if(!rtpe_function_call_prepare(bencbuf, msg, &ng_flags, op, flags_str, &oldbody))
