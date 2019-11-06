@@ -219,6 +219,7 @@ typedef struct rtpe_async_param_ {
 	bencode_buffer_t *bencbuf;
 	enum rtpe_operation op;
 	struct rtpe_node *node;
+	char* cookie;
 	pv_spec_t *spvar;
 	pv_spec_t *bpvar;
 	str* body;
@@ -2112,7 +2113,7 @@ static bencode_item_t *rtpe_function_call_process(bencode_buffer_t *bencbuf, cha
 	return resp;
 }
 
-static int start_async_send_rtpe_command(struct rtpe_node *node, bencode_item_t *dict, enum async_ret_code *out_fd)
+static int start_async_send_rtpe_command(struct rtpe_node *node, bencode_item_t *dict, char* cookie, enum async_ret_code *out_fd)
 {
 	struct sockaddr_un addr;
 	int fd, len, vcnt;
@@ -2179,7 +2180,7 @@ static int start_async_send_rtpe_command(struct rtpe_node *node, bencode_item_t 
 				}
 			}
 		}
-		v[0].iov_base = gencookie();
+		v[0].iov_base = cookie;
 		v[0].iov_len = strlen(v[0].iov_base);
 		// FIXME only one repetition
 		//for (i = 0; i < rtpengine_retr; i++) {
@@ -2217,8 +2218,9 @@ error:
 
 enum async_ret_code resume_async_send_rtpe_command(int fd, struct sip_msg *msg, void *_param)
 {
-	int len = 0;
+	int len = 0, cookielen = 0;
 	static char buf[0x10000];
+	char* cp = buf;
 	struct pollfd fds[1];
 	bencode_item_t *dict;
 	// FIXME check this
@@ -2254,6 +2256,16 @@ enum async_ret_code resume_async_send_rtpe_command(int fd, struct sip_msg *msg, 
 				RTPE_IO_ERROR_CLOSE(param->node->idx);
 				goto error;
 			}
+			cookielen = strlen(param->cookie);
+			if (len >= (cookielen - 1) &&
+			    memcmp(buf, param-cookie, (cookielen - 1)) == 0) {
+				len -= (cookielen - 1);
+				cp += (cookielen - 1);
+				if (len != 0) {
+					len--;
+					cp++;
+				}
+			}
 			fds[0].revents = 0;
 		}
 	}
@@ -2268,7 +2280,7 @@ enum async_ret_code resume_async_send_rtpe_command(int fd, struct sip_msg *msg, 
 	}
 
 	//// process reply ////
-	dict = rtpe_function_call_process(param->bencbuf, buf, len);
+	dict = rtpe_function_call_process(param->bencbuf, cp, len);
 	if(!dict) {
 		goto error;
 	}
@@ -2326,10 +2338,14 @@ enum async_ret_code resume_async_send_rtpe_command(int fd, struct sip_msg *msg, 
 		}
 	}
 
+	free(param->cookie);
 	bencode_buffer_free(param->bencbuf);
+	pkg_free(param);
 	return 1;
 error:
+	free(param->cookie);
 	bencode_buffer_free(param->bencbuf);
+	pkg_free(param);
 	return -1;
 }
 
@@ -2342,6 +2358,7 @@ static int rtpe_function_call_async(struct sip_msg *msg, async_ctx *ctx,
 	struct rtpe_set *set;
 	int ret, read_fd;
 	rtpe_async_param *param;
+	char* cookie = NULL;
 
 	bencode_buffer_t *bencbuf = pkg_malloc(sizeof(bencode_buffer_t));
 	memset(&ng_flags, 0, sizeof(ng_flags));
@@ -2385,7 +2402,8 @@ static int rtpe_function_call_async(struct sip_msg *msg, async_ctx *ctx,
 			goto error;
 		}
 
-		ret = start_async_send_rtpe_command(node, ng_flags.dict, &read_fd);
+		cookie = gencookie();
+		ret = start_async_send_rtpe_command(node, ng_flags.dict, cookie, &read_fd);
 
 	// FIXME only one RTP node is used
 //	} while (cp == NULL);
@@ -2407,6 +2425,7 @@ static int rtpe_function_call_async(struct sip_msg *msg, async_ctx *ctx,
 	param->bencbuf = bencbuf;
 	param->op = op;
 	param->node = node;
+	param->cookie = strdup(cookie);
 	param->bpvar = bpvar;
 	param->spvar = spvar;
 	param->body = body_in;
