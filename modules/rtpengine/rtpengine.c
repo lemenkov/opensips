@@ -2258,7 +2258,7 @@ enum async_ret_code resume_async_send_rtpe_command(int fd, struct sip_msg *msg, 
 			}
 			cookielen = strlen(param->cookie);
 			if (len >= (cookielen - 1) &&
-			    memcmp(buf, param-cookie, (cookielen - 1)) == 0) {
+			    memcmp(buf, param->cookie, (cookielen - 1)) == 0) {
 				len -= (cookielen - 1);
 				cp += (cookielen - 1);
 				if (len != 0) {
