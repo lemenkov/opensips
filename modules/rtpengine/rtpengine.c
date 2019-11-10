@@ -2131,6 +2131,9 @@ enum async_ret_code resume_async_send_rtpe_command(int fd, struct sip_msg *msg, 
 	char* cp = buf;
 	struct pollfd fds[1];
 	bencode_item_t *dict;
+	// FIXME check this
+	//str oldbody, newbody;
+	str oldbody = { 0, 0 };
 	str newbody;
 	struct lump *anchor;
 	pv_value_t val;
@@ -2203,9 +2206,12 @@ enum async_ret_code resume_async_send_rtpe_command(int fd, struct sip_msg *msg, 
 				if(pv_set_value(msg, param->bpvar, (int)EQ_T, &val)<0)
 					LM_ERR("setting PV failed\n");
 				pkg_free(newbody.s);
-			} else if (!(param->body) || (extract_body(msg, param->body) > 0)) {
+			} else if (!(param->body) || (extract_body(msg, &oldbody) > 0)) {
+				// FIXME merge into previous line
+				if (param->body)
+					oldbody = *(param->body);
 				/* otherwise directly set the body of the message */
-				anchor = del_lump(msg, param->body->s - msg->buf, param->body->len, 0);
+				anchor = del_lump(msg, oldbody.s - msg->buf, oldbody.len, 0);
 				if (!anchor) {
 					LM_ERR("del_lump failed\n");
 					goto error;
@@ -2241,15 +2247,11 @@ enum async_ret_code resume_async_send_rtpe_command(int fd, struct sip_msg *msg, 
 	}
 
 	free(param->cookie);
-	pkg_free(param->body->s);
-	pkg_free(param->body);
 	bencode_buffer_free(param->bencbuf);
 	pkg_free(param);
 	return 1;
 error:
 	free(param->cookie);
-	pkg_free(param->body->s);
-	pkg_free(param->body);
 	bencode_buffer_free(param->bencbuf);
 	pkg_free(param);
 	return -1;
@@ -2259,6 +2261,7 @@ static int rtpe_function_call_async(struct sip_msg *msg, async_ctx *ctx,
 	enum rtpe_operation op, str *flags_str, str *body_in, pv_spec_t *spvar, pv_spec_t *bpvar)
 {
 	struct ng_flags_parse ng_flags;
+	str oldbody;
 	struct rtpe_node *node;
 	struct rtpe_set *set;
 	int ret, read_fd;
@@ -2267,7 +2270,6 @@ static int rtpe_function_call_async(struct sip_msg *msg, async_ctx *ctx,
 
 	bencode_buffer_t *bencbuf = pkg_malloc(sizeof(bencode_buffer_t));
 	memset(&ng_flags, 0, sizeof(ng_flags));
-	str* oldbody = pkg_malloc(sizeof(str));
 
 	param = pkg_malloc(sizeof *param);
 	if (!param) {
@@ -2280,17 +2282,16 @@ static int rtpe_function_call_async(struct sip_msg *msg, async_ctx *ctx,
 
 	if (op != OP_DELETE) {
 		if (!body_in) {
-			if (extract_body(msg, oldbody) == -1) {
+			if (extract_body(msg, &oldbody) == -1) {
 				LM_ERR("can't extract body from the message\n");
 				goto error;
 			}
 		} else {
-			oldbody->s = pkg_malloc(body_in->len);
-			str_cpy(oldbody, body_in);
+			oldbody = *body_in;
 		}
 	}
 
-	if(!rtpe_function_call_prepare(bencbuf, msg, &ng_flags, op, flags_str, oldbody))
+	if(!rtpe_function_call_prepare(bencbuf, msg, &ng_flags, op, flags_str, &oldbody))
 		goto error;
 
 	//// send it out ////
@@ -2335,7 +2336,7 @@ static int rtpe_function_call_async(struct sip_msg *msg, async_ctx *ctx,
 	param->cookie = strdup(cookie);
 	param->bpvar = bpvar;
 	param->spvar = spvar;
-	param->body = oldbody;
+	param->body = body_in;
 
 	ctx->resume_f = resume_async_send_rtpe_command;
 	ctx->resume_param = param;
