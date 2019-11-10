@@ -220,7 +220,6 @@ typedef struct rtpe_async_param_ {
 	char* cookie;
 	pv_spec_t *spvar;
 	pv_spec_t *bpvar;
-	str* body;
 } rtpe_async_param;
 
 
@@ -2206,10 +2205,7 @@ enum async_ret_code resume_async_send_rtpe_command(int fd, struct sip_msg *msg, 
 				if(pv_set_value(msg, param->bpvar, (int)EQ_T, &val)<0)
 					LM_ERR("setting PV failed\n");
 				pkg_free(newbody.s);
-			} else if (!(param->body) || (extract_body(msg, &oldbody) > 0)) {
-				// FIXME merge into previous line
-				if (param->body)
-					oldbody = *(param->body);
+			} else if (extract_body(msg, &oldbody) > 0) {
 				/* otherwise directly set the body of the message */
 				anchor = del_lump(msg, oldbody.s - msg->buf, oldbody.len, 0);
 				if (!anchor) {
@@ -2336,7 +2332,6 @@ static int rtpe_function_call_async(struct sip_msg *msg, async_ctx *ctx,
 	param->cookie = strdup(cookie);
 	param->bpvar = bpvar;
 	param->spvar = spvar;
-	param->body = body_in;
 
 	ctx->resume_f = resume_async_send_rtpe_command;
 	ctx->resume_param = param;
