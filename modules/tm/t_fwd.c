@@ -251,6 +251,7 @@ static inline void post_print_uac_request(struct sip_msg *request,
 {
 	reset_init_lump_flags();
 	/* delete inserted branch lumps */
+	del_flaged_lumps( &request->add_rm, LUMPFLAG_BRANCH);
 	del_flaged_lumps( &request->body_lumps, LUMPFLAG_BRANCH);
 	/* free any potential new uri */
 	if (request->new_uri.s!=org_uri->s) {
