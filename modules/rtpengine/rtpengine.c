@@ -2107,7 +2107,7 @@ static int start_async_send_rtpe_command(struct rtpe_node *node, bencode_item_t 
 {
 	struct sockaddr_un addr;
 	int fd, len, vcnt;
-	static char buf[0x10000];
+	char buf[0x10000];
 	struct pollfd fds[1];
 	struct iovec *v;
 
