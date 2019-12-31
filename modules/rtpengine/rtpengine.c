@@ -2390,8 +2390,7 @@ static int rtpe_function_call_async(struct sip_msg *msg, async_ctx *ctx, str *fl
 	RTPE_START_READ();
 	// FIXME only one RTP node is used
 //	do {
-		// CallID was parsed earlier in rtpe_function_call_prepare
-		node = select_rtpe_node(msg->callid->body, 1, set);
+		node = select_rtpe_node(ng_flags.call_id, 1, set);
 		if (!node) {
 			LM_ERR("no available proxies\n");
 			RTPE_STOP_READ();
@@ -2461,8 +2460,7 @@ static bencode_item_t *rtpe_function_call(bencode_buffer_t *bencbuf, struct sip_
 
 	RTPE_START_READ();
 	do {
-		// CallID was parsed earlier in rtpe_function_call_prepare
-		node = select_rtpe_node(msg->callid->body, 1, set);
+		node = select_rtpe_node(ng_flags.call_id, 1, set);
 		if (!node) {
 			LM_ERR("no available proxies\n");
 			RTPE_STOP_READ();
