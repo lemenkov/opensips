@@ -2346,7 +2346,7 @@ error:
 }
 
 static int rtpe_function_call_async(struct sip_msg *msg, async_ctx *ctx, str *flags_str,
-	pv_spec_t *spvar, pv_spec_t *bpvar, str *body_in, enum rtpe_operation op)
+	pv_spec_t *spvar, pv_spec_t *bpvar, str *body, enum rtpe_operation op)
 {
 	struct ng_flags_parse ng_flags;
 	str oldbody;
@@ -2369,13 +2369,13 @@ static int rtpe_function_call_async(struct sip_msg *msg, async_ctx *ctx, str *fl
 	//// get & init basic stuff needed ////
 
 	if (op != OP_DELETE) {
-		if (!body_in) {
+		if (!body) {
 			if (extract_body(msg, &oldbody) == -1) {
 				LM_ERR("can't extract body from the message\n");
 				goto error;
 			}
 		} else {
-			oldbody = *body_in;
+			oldbody = *body;
 		}
 	}
 
