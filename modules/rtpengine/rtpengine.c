@@ -2284,35 +2284,34 @@ enum async_ret_code resume_async_send_rtpe_command(int fd, struct sip_msg *msg, 
 		goto error;
 	}
 
-	if ((param->op == OP_OFFER) || (param->op == OP_ANSWER)){
+	if (param->op != OP_DELETE) {
 		if (!bencode_dictionary_get_str_dup(dict, "sdp", &newbody)) {
 			LM_DBG("failed to extract sdp body from proxy reply\n");
+			goto error;
 		}
-		else {
-			/* if we have a variable to store into, use it */
-			if (param->bpvar) {
-				memset(&val, 0, sizeof(pv_value_t));
-				val.flags = PV_VAL_STR;
-				val.rs = newbody;
-				if(pv_set_value(msg, param->bpvar, (int)EQ_T, &val)<0)
-					LM_ERR("setting PV failed\n");
-				pkg_free(newbody.s);
-			} else if (extract_body(msg, &oldbody) > 0) {
-				/* otherwise directly set the body of the message */
-				anchor = del_lump(msg, oldbody.s - msg->buf, oldbody.len, 0);
-				if (!anchor) {
-					LM_ERR("del_lump failed\n");
-					goto error;
-				}
-				if (!insert_new_lump_after(anchor, newbody.s, newbody.len, 0)) {
-					LM_ERR("insert_new_lump_after failed\n");
-					goto error;
-				}
-			} else {
-				LM_ERR("cannot parse old body!\n");
+
+		/* if we have a variable to store into, use it */
+		if (param->bpvar) {
+			memset(&val, 0, sizeof(pv_value_t));
+			val.flags = PV_VAL_STR;
+			val.rs = newbody;
+			if(pv_set_value(msg, param->bpvar, (int)EQ_T, &val)<0)
+				LM_ERR("setting PV failed\n");
+			pkg_free(newbody.s);
+		} else if (extract_body(msg, &oldbody) > 0) {
+			/* otherwise directly set the body of the message */
+			anchor = del_lump(msg, oldbody.s - msg->buf, oldbody.len, 0);
+			if (!anchor) {
+				LM_ERR("del_lump failed\n");
 				goto error;
 			}
-
+			if (!insert_new_lump_after(anchor, newbody.s, newbody.len, 0)) {
+				LM_ERR("insert_new_lump_after failed\n");
+				goto error;
+			}
+		} else {
+			LM_ERR("cannot parse old body!\n");
+			goto error;
 		}
 	}
 
