@@ -2128,7 +2128,6 @@ enum async_ret_code resume_async_send_rtpe_command(int fd, struct sip_msg *msg, 
 	int len = 0, cookielen = 0;
 	static char buf[0x10000];
 	char* cp = buf;
-	struct pollfd fds[1];
 	bencode_item_t *dict;
 	// FIXME check this
 	//str oldbody, newbody;
@@ -2151,29 +2150,23 @@ enum async_ret_code resume_async_send_rtpe_command(int fd, struct sip_msg *msg, 
 		}
 	}
 	else {
-		fds[0].fd = fd;
-		fds[0].events = POLLIN;
-		fds[0].revents = 0;
-		while ((poll(fds, 1, rtpengine_tout * 1000) == 1) && (fds[0].revents & POLLIN) != 0) {
-			do {
-				len = recv(fd, buf, sizeof(buf)-1, 0);
-			} while (len == -1 && errno == EINTR);
-			if (len <= 0) {
-				LM_ERR("can't read reply from a RTP proxy\n");
-				RTPE_IO_ERROR_CLOSE(param->node->idx);
-				goto error;
+		do {
+			len = recv(fd, buf, sizeof(buf)-1, 0);
+		} while (len == -1 && errno == EINTR);
+		if (len <= 0) {
+			LM_ERR("can't read reply from a RTP proxy\n");
+			RTPE_IO_ERROR_CLOSE(param->node->idx);
+			goto error;
+		}
+		cookielen = strlen(param->cookie);
+		if (len >= (cookielen - 1) &&
+		    memcmp(buf, param->cookie, (cookielen - 1)) == 0) {
+			len -= (cookielen - 1);
+			cp += (cookielen - 1);
+			if (len != 0) {
+				len--;
+				cp++;
 			}
-			cookielen = strlen(param->cookie);
-			if (len >= (cookielen - 1) &&
-			    memcmp(buf, param->cookie, (cookielen - 1)) == 0) {
-				len -= (cookielen - 1);
-				cp += (cookielen - 1);
-				if (len != 0) {
-					len--;
-					cp++;
-				}
-			}
-			fds[0].revents = 0;
 		}
 	}
 
