@@ -21,6 +21,7 @@
 
 #include "../../ut.h"
 #include "../../mod_fix.h"
+#include "../../lib/json/opensips_json_c_helper.h"
 #include "cgrates_cmd.h"
 #include "cgrates_common.h"
 
