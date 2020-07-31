@@ -927,6 +927,10 @@ static int add_rtpengine_socks(struct rtpe_set * rtpe_list,
 			pnode->rn_umode = 0;
 			pnode->rn_address += 5;
 		}
+		if (!lock_init(&pnode->lock)){
+			LM_ERR("Cannot init sync object\n");
+			return -1;
+		}
 
 		if (rtpe_list->rn_first == NULL) {
 			rtpe_list->rn_first = pnode;
@@ -1570,6 +1574,8 @@ static void free_rtpe_nodes(struct rtpe_set *list)
 		if(crt_rtpp->rn_url.s)
 			shm_free(crt_rtpp->rn_url.s);
 
+		lock_destroy(&crt_rtpp->lock);
+
 		last_rtpp = crt_rtpp;
 		crt_rtpp = last_rtpp->rn_next;
 		shm_free(last_rtpp);
@@ -2147,6 +2153,7 @@ static int start_async_send_rtpe_command(struct rtpe_node *node, bencode_item_t 
 			goto badproxy;
 		}
 
+		lock_get(&node->lock);
 		do {
 			len = writev(fd, v + 1, vcnt);
 		} while (len == -1 && errno == EINTR);
@@ -2159,6 +2166,7 @@ static int start_async_send_rtpe_command(struct rtpe_node *node, bencode_item_t 
 		*out_fd = fd;
 	} else {
 		if (rtpe_socks[node->idx] != -1) {
+			lock_get(&node->lock);
 			fds[0].fd = rtpe_socks[node->idx];
 			fds[0].events = POLLIN;
 			fds[0].revents = 0;
@@ -2178,6 +2186,7 @@ static int start_async_send_rtpe_command(struct rtpe_node *node, bencode_item_t 
 					break;
 				}
 			}
+			lock_release(&node->lock);
 		}
 		v[0].iov_base = cookie;
 		v[0].iov_len = strlen(v[0].iov_base);
@@ -2187,6 +2196,7 @@ static int start_async_send_rtpe_command(struct rtpe_node *node, bencode_item_t 
 				LM_ERR("cannot reconnect RTP engine socket!\n");
 				goto badproxy;
 			}
+			lock_get(&node->lock);
 			do {
 				len = writev(rtpe_socks[node->idx], v, vcnt + 1);
 			} while (len == -1 && (errno == EINTR || errno == ENOBUFS || errno == EMSGSIZE));
@@ -2194,6 +2204,7 @@ static int start_async_send_rtpe_command(struct rtpe_node *node, bencode_item_t 
 				LM_ERR("can't send command to a RTP proxy (%d:%s)\n",
 						errno, strerror(errno));
 				RTPE_IO_ERROR_CLOSE(rtpe_socks[node->idx]);
+				lock_release(&node->lock);
 				goto badproxy;
 			}
 		// FIXME only one repetition
@@ -2235,6 +2246,7 @@ enum async_ret_code resume_async_send_rtpe_command(int fd, struct sip_msg *msg, 
 		do {
 			len = read(fd, buf, sizeof(buf) - 1);
 		} while (len == -1 && errno == EINTR);
+		lock_release(&param->node->lock);
 		close(fd);
 		if (len <= 0) {
 			LM_ERR("can't read reply from a RTP proxy\n");
@@ -2245,6 +2257,7 @@ enum async_ret_code resume_async_send_rtpe_command(int fd, struct sip_msg *msg, 
 		do {
 			len = recv(fd, buf, sizeof(buf)-1, 0);
 		} while (len == -1 && errno == EINTR);
+		lock_release(&param->node->lock);
 		if (len <= 0) {
 			LM_ERR("can't read reply from a RTP proxy\n");
 			RTPE_IO_ERROR_CLOSE(param->node->idx);
