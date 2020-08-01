@@ -2384,7 +2384,7 @@ static int rtpe_function_call_async(struct sip_msg *msg, async_ctx *ctx, str *fl
 		}
 	}
 
-	if(!rtpe_function_call_prepare(bencbuf, msg, &ng_flags, op, flags_str, &oldbody))
+	if(!rtpe_function_call_prepare(bencbuf, msg, &ng_flags, op, flags_str, &oldbody, NULL))
 		goto error;
 
 	//// send it out ////
