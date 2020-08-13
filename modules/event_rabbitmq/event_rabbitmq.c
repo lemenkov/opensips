@@ -478,7 +478,7 @@ static int rmq_raise(struct sip_msg *msg, str* ev_name,
 
 	buf.s = evi_build_payload(params, ev_name, 0, NULL, NULL);
 	if (!buf.s) {
-		LM_ERR("Failed to build event payload\n");
+		LM_ERR("Failed to build event payload %.*s\n", ev_name->len, ev_name->s);
 		return -1;
 	}
 	buf.len = strlen(buf.s);
