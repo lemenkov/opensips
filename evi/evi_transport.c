@@ -191,7 +191,10 @@ char *evi_build_payload(evi_params_t *params, str *method, int id,
 				goto end;
 			}
 		} else {
-			tmp = cJSON_CreateStr(param->val.s.s, param->val.s.len);
+			if (param->val.s.s)
+				tmp = cJSON_CreateStr(param->val.s.s, param->val.s.len);
+			else
+				tmp = cJSON_CreateNull();
 			if (!tmp) {
 				LM_ERR("Failed to create JSON string %.*s\n", param->name.len, param->name.s);
 				goto end;
