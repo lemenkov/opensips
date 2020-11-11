@@ -27,7 +27,6 @@
 #define _RTPENGINE_H
 
 #include "bencode.h"
-#include "../../locking.h"
 #include "../../str.h"
 
 struct rtpe_node {
@@ -39,7 +38,6 @@ struct rtpe_node {
 	unsigned			rn_weight;		/* for load balancing */
 	unsigned int		rn_recheck_ticks;
 	struct rtpe_node	*rn_next;
-	gen_lock_t		lock;
 };
 
 
