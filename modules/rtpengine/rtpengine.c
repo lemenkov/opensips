@@ -2251,6 +2251,10 @@ enum async_ret_code resume_async_send_rtpe_command(int fd, struct sip_msg *msg, 
 				cp++;
 			}
 		}
+		else {
+			LM_ERR("read reply from a RTP proxy FD %d. Cookie does NOT match (%.*s <> %.*s)\n", fd, cookielen - 1, param->cookie, cookielen - 1, buf);
+			goto error;
+		}
 	}
 
 	/* store the value of the selected node */
