@@ -46,6 +46,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
+#include <fcntl.h>
 #include <unistd.h>
 
 #include "../../async.h"
@@ -904,6 +905,8 @@ static int add_rtpengine_socks(struct rtpe_set * rtpe_list,
 		pnode->rn_weight = weight;
 		pnode->rn_umode = 0;
 		pnode->rn_disabled = 0;
+		pnode->ai_addrlen = 0;
+		pnode->ai_addr = NULL;
 		pnode->rn_url.s = shm_malloc(p2 - p1 + 1);
 		if (pnode->rn_url.s == NULL) {
 			shm_free(pnode);
@@ -1482,6 +1485,10 @@ static inline int rtpengine_connect_node(struct rtpe_node *pnode)
 
 	rtpe_socks[pnode->idx] = socket((pnode->rn_umode == 6)
 			? AF_INET6 : AF_INET, SOCK_DGRAM, 0);
+	pnode->ai_addrlen = res->ai_addrlen;
+	//shm_free(pnode->ai_addr);
+	pnode->ai_addr = shm_malloc(res->ai_addrlen);
+	memcpy(pnode->ai_addr, res->ai_addr, res->ai_addrlen);
 	if ( rtpe_socks[pnode->idx] == -1) {
 		LM_ERR("can't create socket\n");
 		freeaddrinfo(res);
@@ -1569,6 +1576,7 @@ static void free_rtpe_nodes(struct rtpe_set *list)
 
 		if(crt_rtpp->rn_url.s)
 			shm_free(crt_rtpp->rn_url.s);
+		shm_free(crt_rtpp->ai_addr);
 
 		last_rtpp = crt_rtpp;
 		crt_rtpp = last_rtpp->rn_next;
@@ -2187,13 +2195,24 @@ static int start_async_send_rtpe_command(struct rtpe_node *node, bencode_item_t 
 				LM_ERR("cannot reconnect RTP engine socket!\n");
 				goto badproxy;
 			}
+
+			fd = socket((node->rn_umode == 6) ? AF_INET6 : AF_INET, SOCK_DGRAM, 0);
+			if (fd < 0) {
+				LM_ERR("can't create socket\n");
+				goto badproxy;
+			}
+			if (connect(fd, node->ai_addr, node->ai_addrlen) < 0) {
+				close(fd);
+				LM_ERR("can't connect to RTP proxy\n");
+				goto badproxy;
+			}
 			do {
-				len = writev(rtpe_socks[node->idx], v, vcnt + 1);
+				len = writev(fd, v, vcnt + 1);
 			} while (len == -1 && (errno == EINTR || errno == ENOBUFS || errno == EMSGSIZE));
 			if (len <= 0) {
 				LM_ERR("can't send command to a RTP proxy (%d:%s)\n",
 						errno, strerror(errno));
-				RTPE_IO_ERROR_CLOSE(rtpe_socks[node->idx]);
+				RTPE_IO_ERROR_CLOSE(fd);
 				goto badproxy;
 			}
 		// FIXME only one repetition
@@ -2202,7 +2221,7 @@ static int start_async_send_rtpe_command(struct rtpe_node *node, bencode_item_t 
 		//	LM_ERR("timeout waiting reply from a RTP proxy\n");
 		//	goto badproxy;
 		//}
-		*out_fd = rtpe_socks[node->idx];
+		*out_fd = fd;
 	}
 
 	return 1;
@@ -2246,7 +2265,7 @@ enum async_ret_code resume_async_send_rtpe_command(int fd, struct sip_msg *msg, 
 			len = recv(fd, buf, sizeof(buf)-1, 0);
 		} while (len == -1 && errno == EINTR);
 		if (len <= 0) {
-			LM_ERR("can't read reply from a RTP proxy\n");
+			LM_ERR("can't read reply from a RTP proxy (%d, %d)\n", len, errno);
 			RTPE_IO_ERROR_CLOSE(param->node->idx);
 			goto error;
 		}
@@ -2328,6 +2347,7 @@ enum async_ret_code resume_async_send_rtpe_command(int fd, struct sip_msg *msg, 
 				/* return here to prevent buffer from being freed */
 				free(param->cookie);
 				pkg_free(param);
+				async_status = ASYNC_DONE_CLOSE_FD;
 				return 1;
 			} else
 				LM_WARN("no more pkg memory - cannot cache stats!\n");
@@ -2338,12 +2358,14 @@ enum async_ret_code resume_async_send_rtpe_command(int fd, struct sip_msg *msg, 
 	bencode_buffer_free(param->bencbuf);
 	pkg_free(param->bencbuf);
 	pkg_free(param);
+	async_status = ASYNC_DONE_CLOSE_FD;
 	return 1;
 error:
 	free(param->cookie);
 	bencode_buffer_free(param->bencbuf);
 	pkg_free(param->bencbuf);
 	pkg_free(param);
+	async_status = ASYNC_DONE_CLOSE_FD;
 	return -1;
 }
 
