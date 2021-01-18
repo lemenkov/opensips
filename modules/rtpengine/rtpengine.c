@@ -2309,8 +2309,10 @@ enum async_ret_code resume_async_send_rtpe_command(int fd, struct sip_msg *msg, 
 	if (param->op == OP_DELETE && rtpengine_stats_used) {
 		/* if statistics are to be used, store stats in the ctx, if possible */
 		if ((ctx = rtpe_ctx_get())) {
-			if (ctx->stats)
+			if (ctx->stats) {
 				rtpe_stats_free(ctx->stats); /* release the buffer */
+				pkg_free(&(ctx->stats->buf));
+			}
 			else
 				ctx->stats = pkg_malloc(sizeof *ctx->stats);
 			if (ctx->stats) {
