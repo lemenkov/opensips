@@ -2338,6 +2338,19 @@ error:
 	return -1;
 }
 
+enum async_ret_code timeout_async_send_rtpe_command(int fd, struct sip_msg *msg, void *_param)
+{
+	rtpe_async_param *param = (rtpe_async_param *)_param;
+	LM_ERR("can't read reply from a RTP proxy (-1, ETIMEOUT)\n");
+
+	free(param->cookie);
+	bencode_buffer_free(param->bencbuf);
+	pkg_free(param->bencbuf);
+	pkg_free(param);
+	async_status = ASYNC_DONE_CLOSE_FD;
+	return -1;
+}
+
 static int rtpe_function_call_async(struct sip_msg *msg, async_ctx *ctx, str *flags_str,
 	pv_spec_t *spvar, pv_spec_t *bpvar, str *body, enum rtpe_operation op)
 {
@@ -2418,6 +2431,7 @@ static int rtpe_function_call_async(struct sip_msg *msg, async_ctx *ctx, str *fl
 	param->spvar = spvar;
 
 	ctx->resume_f = resume_async_send_rtpe_command;
+	ctx->timeout_f = timeout_async_send_rtpe_command;
 	ctx->resume_param = param;
 
 	/* async started with success */
