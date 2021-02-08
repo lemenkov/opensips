@@ -2398,7 +2398,7 @@ static int rtpe_function_call_async(struct sip_msg *msg, async_ctx *ctx, str *fl
 
 	param = pkg_malloc(sizeof *param);
 	if (!param) {
-		LM_ERR("no more shm\n");
+		LM_ERR("no more pkg mem\n");
 		goto error;
 	}
 	memset(param, '\0', sizeof *param);
