@@ -1977,13 +1977,9 @@ static bool rtpe_function_call_prepare(bencode_buffer_t *bencbuf, struct sip_msg
 		LM_ERR("could not initialize bencode_buffer_t\n");
 		return false;
 	}
-	if (!extra_dict) {
-		if (bencode_buffer_init(bencbuf)) {
-			LM_ERR("could not initialize bencode_buffer_t\n");
-			return NULL;
-		}
+	if (!extra_dict)
 		ng_flags->dict = bencode_dictionary(bencbuf);
-	} else
+	else
 		ng_flags->dict = extra_dict;
 
 	if (op == OP_OFFER || op == OP_ANSWER) {
