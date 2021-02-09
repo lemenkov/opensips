@@ -2248,9 +2248,9 @@ enum async_ret_code resume_async_send_rtpe_command(int fd, struct sip_msg *msg, 
 		}
 	}
 	else {
-		do {
+		//do {
 			len = recv(fd, buf, sizeof(buf)-1, 0);
-		} while (len == -1 && errno == EINTR);
+		//} while (len == -1 && errno == EINTR);
 		if (len <= 0) {
 			LM_ERR("can't read reply from a RTP proxy (%d, %d)\n", len, errno);
 			RTPE_IO_ERROR_CLOSE(param->node->idx);
