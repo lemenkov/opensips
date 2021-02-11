@@ -2248,6 +2248,12 @@ enum async_ret_code resume_async_send_rtpe_command(int fd, struct sip_msg *msg, 
 		}
 	}
 	else {
+		// FIXME
+		struct timeval tv;
+		tv.tv_sec = 1; // timeout in seconds
+		tv.tv_usec = 0;
+		setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
+
 		//do {
 			len = recv(fd, buf, sizeof(buf)-1, 0);
 		//} while (len == -1 && errno == EINTR);
