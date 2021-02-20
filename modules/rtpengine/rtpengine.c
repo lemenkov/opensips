@@ -2354,14 +2354,14 @@ enum async_ret_code resume_async_send_rtpe_command(int fd, struct sip_msg *msg, 
 		}
 	}
 
-	free(param->cookie);
+	pkg_free(param->cookie);
 	bencode_buffer_free(param->bencbuf);
 	pkg_free(param->bencbuf);
 	pkg_free(param);
 	async_status = ASYNC_DONE_CLOSE_FD;
 	return 1;
 error:
-	free(param->cookie);
+	pkg_free(param->cookie);
 	bencode_buffer_free(param->bencbuf);
 	pkg_free(param->bencbuf);
 	pkg_free(param);
@@ -2374,7 +2374,7 @@ enum async_ret_code timeout_async_send_rtpe_command(int fd, struct sip_msg *msg,
 	rtpe_async_param *param = (rtpe_async_param *)_param;
 	LM_ERR("can't read reply from a RTP proxy (-1, ETIMEOUT)\n");
 
-	free(param->cookie);
+	pkg_free(param->cookie);
 	bencode_buffer_free(param->bencbuf);
 	pkg_free(param->bencbuf);
 	pkg_free(param);
@@ -2396,12 +2396,12 @@ static int rtpe_function_call_async(struct sip_msg *msg, async_ctx *ctx, str *fl
 	bencode_buffer_t *bencbuf = pkg_malloc(sizeof(bencode_buffer_t));
 	memset(&ng_flags, 0, sizeof(ng_flags));
 
-	param = pkg_malloc(sizeof *param);
+	param = pkg_malloc(sizeof(rtpe_async_param));
 	if (!param) {
 		LM_ERR("no more pkg mem\n");
 		goto error;
 	}
-	memset(param, '\0', sizeof *param);
+	memset(param, 0, sizeof(rtpe_async_param));
 
 	//// get & init basic stuff needed ////
 
@@ -2457,7 +2457,7 @@ static int rtpe_function_call_async(struct sip_msg *msg, async_ctx *ctx, str *fl
 	param->bencbuf = bencbuf;
 	param->op = op;
 	param->node = node;
-	param->cookie = strdup(cookie);
+	param->cookie = pkg_strdup(cookie);
 	param->bpvar = bpvar;
 	param->spvar = spvar;
 
