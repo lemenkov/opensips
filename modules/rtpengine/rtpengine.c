@@ -1993,8 +1993,10 @@ static bool rtpe_function_call_prepare(bencode_buffer_t *bencbuf, struct sip_msg
 		return false;
 	}
 
-	if (parse_flags(ng_flags, msg, &op, flags_nt.s))
+	if (parse_flags(ng_flags, msg, &op, flags_nt.s)) {
+		pkg_free(flags_nt.s);
 		return false;
+	}
 
 	if (!ng_flags->call_id.len &&
 			(get_callid(msg, &ng_flags->call_id) == -1 || ng_flags->call_id.len == 0)) {
@@ -2079,7 +2081,6 @@ static bool rtpe_function_call_prepare(bencode_buffer_t *bencbuf, struct sip_msg
 		return false;
 	}
 
-	// FIXME leakage. We could throw NULL earlier.
 	if (flags_nt.s)
 		pkg_free(flags_nt.s);
 
@@ -2338,7 +2339,8 @@ enum async_ret_code resume_async_send_rtpe_command(int fd, struct sip_msg *msg, 
 				ctx->stats->dict = dict;
 				ctx->stats->json.s = 0;
 				/* return here to prevent buffer from being freed */
-				free(param->cookie);
+				pkg_free(param->bencbuf);
+				pkg_free(param->cookie);
 				pkg_free(param);
 				async_status = ASYNC_DONE_CLOSE_FD;
 				return 1;
@@ -2389,13 +2391,6 @@ static int rtpe_function_call_async(struct sip_msg *msg, async_ctx *ctx, str *fl
 	bencode_buffer_t *bencbuf = pkg_malloc(sizeof(bencode_buffer_t));
 	memset(&ng_flags, 0, sizeof(ng_flags));
 
-	param = pkg_malloc(sizeof(rtpe_async_param));
-	if (!param) {
-		LM_ERR("no more pkg mem\n");
-		goto error;
-	}
-	memset(param, 0, sizeof(rtpe_async_param));
-
 	//// get & init basic stuff needed ////
 
 	if (op != OP_DELETE) {
@@ -2439,13 +2434,24 @@ static int rtpe_function_call_async(struct sip_msg *msg, async_ctx *ctx, str *fl
 	if (read_fd == ASYNC_NO_IO) {
 		ctx->resume_f = NULL;
 		ctx->resume_param = NULL;
+		bencode_buffer_free(bencbuf);
+		pkg_free(bencbuf);
 		return ret;
 
 	/* no need for async - transfer already completed! */
 	} else if (read_fd == ASYNC_SYNC) {
 		async_status = ASYNC_SYNC;
+		bencode_buffer_free(bencbuf);
+		pkg_free(bencbuf);
 		return ret;
 	}
+
+	param = pkg_malloc(sizeof(rtpe_async_param));
+	if (!param) {
+		LM_ERR("no more pkg mem\n");
+		goto error;
+	}
+	memset(param, 0, sizeof(rtpe_async_param));
 
 	param->bencbuf = bencbuf;
 	param->op = op;
