@@ -1485,10 +1485,6 @@ static inline int rtpengine_connect_node(struct rtpe_node *pnode)
 
 	rtpe_socks[pnode->idx] = socket((pnode->rn_umode == 6)
 			? AF_INET6 : AF_INET, SOCK_DGRAM, 0);
-	pnode->ai_addrlen = res->ai_addrlen;
-	//shm_free(pnode->ai_addr);
-	pnode->ai_addr = shm_malloc(res->ai_addrlen);
-	memcpy(pnode->ai_addr, res->ai_addr, res->ai_addrlen);
 	if ( rtpe_socks[pnode->idx] == -1) {
 		LM_ERR("can't create socket\n");
 		freeaddrinfo(res);
@@ -1502,6 +1498,10 @@ static inline int rtpengine_connect_node(struct rtpe_node *pnode)
 		freeaddrinfo(res);
 		return 0;
 	}
+	pnode->ai_addrlen = res->ai_addrlen;
+	shm_free(pnode->ai_addr);
+	pnode->ai_addr = shm_malloc(res->ai_addrlen);
+	memcpy(pnode->ai_addr, res->ai_addr, res->ai_addrlen);
 	freeaddrinfo(res);
 	return 1;
 }
@@ -1577,6 +1577,7 @@ static void free_rtpe_nodes(struct rtpe_set *list)
 		if(crt_rtpp->rn_url.s)
 			shm_free(crt_rtpp->rn_url.s);
 		shm_free(crt_rtpp->ai_addr);
+		crt_rtpp->ai_addr = NULL;
 
 		last_rtpp = crt_rtpp;
 		crt_rtpp = last_rtpp->rn_next;
