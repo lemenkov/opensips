@@ -34,8 +34,8 @@ struct rtpe_node {
 	str					rn_url;			/* unparsed, deletable */
 	int					rn_umode;
 	char				*rn_address;	/* substring of rn_url */
-	socklen_t        ai_addrlen;
-	struct sockaddr *ai_addr;
+	socklen_t       ai_addrlen;
+	struct sockaddr ai_addr;
 	int					rn_disabled;	/* found unaccessible? */
 	unsigned			rn_weight;		/* for load balancing */
 	unsigned int		rn_recheck_ticks;
