@@ -905,8 +905,6 @@ static int add_rtpengine_socks(struct rtpe_set * rtpe_list,
 		pnode->rn_weight = weight;
 		pnode->rn_umode = 0;
 		pnode->rn_disabled = 0;
-		pnode->ai_addrlen = 0;
-		pnode->ai_addr = NULL;
 		pnode->rn_url.s = shm_malloc(p2 - p1 + 1);
 		if (pnode->rn_url.s == NULL) {
 			shm_free(pnode);
@@ -1499,9 +1497,7 @@ static inline int rtpengine_connect_node(struct rtpe_node *pnode)
 		return 0;
 	}
 	pnode->ai_addrlen = res->ai_addrlen;
-	shm_free(pnode->ai_addr);
-	pnode->ai_addr = shm_malloc(res->ai_addrlen);
-	memcpy(pnode->ai_addr, res->ai_addr, res->ai_addrlen);
+	memcpy(&(pnode->ai_addr), res->ai_addr, res->ai_addrlen);
 	freeaddrinfo(res);
 	return 1;
 }
@@ -1576,8 +1572,6 @@ static void free_rtpe_nodes(struct rtpe_set *list)
 
 		if(crt_rtpp->rn_url.s)
 			shm_free(crt_rtpp->rn_url.s);
-		shm_free(crt_rtpp->ai_addr);
-		crt_rtpp->ai_addr = NULL;
 
 		last_rtpp = crt_rtpp;
 		crt_rtpp = last_rtpp->rn_next;
@@ -2199,7 +2193,7 @@ static int start_async_send_rtpe_command(struct rtpe_node *node, bencode_item_t 
 				LM_ERR("can't create socket\n");
 				goto badproxy;
 			}
-			if (connect(fd, node->ai_addr, node->ai_addrlen) < 0) {
+			if (connect(fd, &(node->ai_addr), node->ai_addrlen) < 0) {
 				close(fd);
 				LM_ERR("can't connect to RTP proxy\n");
 				goto badproxy;
