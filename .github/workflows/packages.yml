@@ -10,6 +10,9 @@ on:
     tags:
          - 'package-*'
 
+env:
+  DEB_DH_SHLIBDEPS_ARGS_ALL: "--dpkg-shlibdeps-params=--ignore-missing-info"
+
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
