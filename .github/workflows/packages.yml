@@ -31,8 +31,7 @@ jobs:
         run: |
             sudo apt install -y devscripts equivs
             sudo mk-build-deps --install packaging/debian/control
-            make tar
-            mv opensips-3.2.0-dev_src.tar.gz ../opensips_3.2.0.orig.tar.gz
+            make deb-orig-tar
             make deb
       # https://github.com/marketplace/actions/upload-files-to-a-github-release
       - name: Upload binaries to release
