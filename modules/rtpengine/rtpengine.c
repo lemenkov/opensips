@@ -2258,9 +2258,14 @@ send_rtpe_command(struct rtpe_node *node, bencode_item_t *dict, int *outlen)
 	struct pollfd fds[1];
 	struct iovec *v;
 
+	if (!dict){
+		LM_ERR("error converting bencode to iovec (NULL root)\n");
+		return NULL;
+	}
+
 	v = bencode_iovec(dict, &vcnt, 1, 0);
 	if (!v) {
-		LM_ERR("error converting bencode to iovec\n");
+		LM_ERR("error converting bencode to iovec (bencode_alloc error)\n");
 		return NULL;
 	}
 #ifdef IOV_MAX
