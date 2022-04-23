@@ -75,6 +75,7 @@
 #include "../../mod_fix.h"
 #include "../../dset.h"
 #include "../../route.h"
+#include "../../modules/tm/dlg.h"
 #include "../../modules/tm/tm_load.h"
 #include "../../modules/dialog/dlg_load.h"
 #include "../../lib/cJSON.h"

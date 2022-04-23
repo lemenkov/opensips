@@ -28,7 +28,6 @@
 int extract_body(struct sip_msg * , str *);
 int check_content_type(struct sip_msg * );
 int get_to_tag(struct sip_msg *, str *);
-int get_from_tag(struct sip_msg *, str *);
 int get_via_branch(struct sip_msg *, int, str *);
 
 #endif
