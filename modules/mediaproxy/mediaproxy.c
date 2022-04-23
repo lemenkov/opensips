@@ -50,10 +50,7 @@
 #include "../dialog/dlg_hash.h"
 #include "../tm/tm_load.h"
 #include "../tm/t_msgbuilder.h"
-
-
-
-
+#include "../tm/dlg.h"
 
 #if defined(__GNUC__) && !defined(__STRICT_ANSI__)
 # define INLINE inline
@@ -528,26 +525,6 @@ get_to_uri(struct sip_msg *msg)
     }
 
     return uri;
-}
-
-
-static str
-get_from_tag(struct sip_msg *msg)
-{
-    static str undefined = str_init("");
-    str tag;
-
-    if (parse_from_header(msg) < 0) {
-        LM_ERR("cannot parse the From header\n");
-        return undefined;
-    }
-
-    tag = get_from(msg)->tag_value;
-
-    if (tag.len == 0)
-        return undefined;
-
-    return tag;
 }
 
 
@@ -1539,7 +1516,7 @@ use_media_proxy(struct sip_msg *msg, char *dialog_id, ice_candidate_data *ice_da
 
     from_uri     = get_from_uri(msg);
     to_uri       = get_to_uri(msg);
-    from_tag     = get_from_tag(msg);
+    get_from_tag(msg, &from_tag);
     to_tag       = get_to_tag(msg);
     user_agent   = get_user_agent(msg);
     signaling_ip = get_signaling_ip(msg);
@@ -1935,7 +1912,7 @@ EndMediaSession(struct sip_msg *msg)
         return -1;
     }
 
-    from_tag = get_from_tag(msg);
+    get_from_tag(msg, &from_tag);
     to_tag   = get_to_tag(msg);
 
     return end_media_session(callid, from_tag, to_tag);
