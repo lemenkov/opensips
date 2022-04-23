@@ -178,6 +178,7 @@
 
 #include "../dialog/dlg_load.h"
 #include "../tm/tm_load.h"
+#include "../tm/dlg.h"
 #include "rtpproxy.h"
 #include "rtpproxy_load.h"
 #include "nhelpr_funcs.h"

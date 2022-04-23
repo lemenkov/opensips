@@ -218,26 +218,3 @@ get_to_tag(struct sip_msg* _m, str* _tag)
 
         return 0;
 }
-
-/*
- * Extract tag from From header field of a request
- */
-int
-get_from_tag(struct sip_msg* _m, str* _tag)
-{
-
-        if (parse_from_header(_m)<0) {
-                LM_ERR("failed to parse From header\n");
-                return -1;
-        }
-
-        if (get_from(_m)->tag_value.len) {
-                _tag->s = get_from(_m)->tag_value.s;
-                _tag->len = get_from(_m)->tag_value.len;
-        } else {
-                _tag->s = NULL; /* fixes gcc 4.0 warnings */
-                _tag->len = 0;
-        }
-
-        return 0;
-}

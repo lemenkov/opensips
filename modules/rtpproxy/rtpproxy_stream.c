@@ -33,6 +33,7 @@
 #include "../../parser/msg_parser.h"
 #include "../../sr_module.h"
 #include "../../ut.h"
+#include "../tm/dlg.h"
 #include "rtpproxy.h"
 #include "nhelpr_funcs.h"
 #include "rtpproxy_vcmd.h"
