@@ -266,28 +266,6 @@ static inline int get_contact_uri(struct sip_msg* _m, str* _uri)
 
 
 /*
- * Extract tag from To header field of a response
- * Doesn't parse message headers !!
- */
-static inline int get_to_tag(struct sip_msg* _m, str* _tag)
-{
-	if (!_m->to) {
-		LM_ERR("To header field missing\n");
-		return -1;
-	}
-
-	if (get_to(_m)->tag_value.len) {
-		_tag->s = get_to(_m)->tag_value.s;
-		_tag->len = get_to(_m)->tag_value.len;
-	} else {
-		_tag->len = 0;
-	}
-
-	return 0;
-}
-
-
-/*
  * Create a copy of route set either in normal or reverse order
  */
 static inline int get_route_set(struct sip_msg* _m, rr_t** _rs, unsigned char _order)

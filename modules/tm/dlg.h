@@ -32,6 +32,7 @@
 #include "../../str.h"
 #include "../../parser/parse_rr.h"
 #include "../../parser/msg_parser.h"
+#include "../../parser/parse_to.h"
 #include "h_table.h"
 
 
@@ -173,5 +174,27 @@ char* print_routeset(char* buf, dlg_t* _d);
  * added by dcm
  */
 int w_calculate_hooks(dlg_t* _d);
+
+
+/*
+ * Extract tag from To header field of a response
+ * Doesn't parse message headers !!
+ */
+static inline int get_to_tag(struct sip_msg* _m, str* _tag)
+{
+	if (!_m->to) {
+		LM_ERR("To header field missing\n");
+		return -1;
+	}
+
+	if (get_to(_m)->tag_value.len) {
+		_tag->s = get_to(_m)->tag_value.s;
+		_tag->len = get_to(_m)->tag_value.len;
+	} else {
+		_tag->len = 0;
+	}
+
+	return 0;
+}
 
 #endif /* DLG_H */
