@@ -2321,6 +2321,17 @@ static bencode_item_t *rtpe_function_call(bencode_buffer_t *bencbuf, struct sip_
 		goto error;
 	}
 	if (!bencode_dictionary_get_strcmp(resp, "result", "error")) {
+		// FIXME in case of an error we have to check it. If it
+		// overloads... 
+		/*
+const char magic_load_limit_strings[__LOAD_LIMIT_MAX][64] = {
+	[LOAD_LIMIT_MAX_SESSIONS] = "Parallel session limit reached",
+	[LOAD_LIMIT_CPU] = "CPU usage limit exceeded",
+	[LOAD_LIMIT_LOAD] = "Load limit exceeded",
+	[LOAD_LIMIT_BW] = "Bandwidth limit exceeded",
+}; */
+		// ...when we still let other answers to pass through this one.
+		// The only blocked command has to be a "OFFER"
 		if (!bencode_dictionary_get_str(resp, "error-reason", &error))
 			LM_ERR("proxy return error but didn't give an error reason: %.*s\n", ret, cp);
 		else
