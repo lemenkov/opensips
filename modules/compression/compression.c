@@ -647,7 +647,7 @@ static int mc_compact(struct sip_msg* msg, mc_whitelist_p wh_list, int* flags_p)
 	SET_GLOBAL_CTX(compact_ctx_pos, (void*)mc_compact_args_p);
 
 	/* register stateless callbacks */
-	if (register_post_raw_processing_cb(wrap_msg_compact, POST_RAW_PROCESSING, 1/*to be freed*/) < 0) {
+	if (register_post_raw_processing_cb(wrap_msg_compact, POST_RAW_PROCESSING, 1/*to be freed*/, 0) < 0) {
 		LM_ERR("failed to add raw processing cb\n");
 		goto error;
 	}
@@ -1094,7 +1094,7 @@ static int mc_compress(struct sip_msg* msg, int *algo_p, int *flags_p,
 	SET_GLOBAL_CTX(compress_ctx_pos, (void*)args);
 
 	/* register stateless callbacks */
-	if (register_post_raw_processing_cb(wrap_msg_compress, POST_RAW_PROCESSING, 1/*to be freed*/) < 0) {
+	if (register_post_raw_processing_cb(wrap_msg_compress, POST_RAW_PROCESSING, 1/*to be freed*/, 0) < 0) {
 		LM_ERR("failed to add raw processing cb\n");
 		goto end;
 	}

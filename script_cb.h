@@ -66,6 +66,7 @@ struct raw_processing_cb_list {
 						else put it 0, register callback only once and callback
 						will be called for every message that reaches msg_send
 						*/
+	unsigned int weight;
 };
 
 struct script_cb {
@@ -92,7 +93,7 @@ int exec_post_rpl_cb( struct sip_msg *msg);
 int exec_parse_err_cb( struct sip_msg *msg);
 
 int register_pre_raw_processing_cb(raw_processing_func f, int type, char freeable);
-int register_post_raw_processing_cb(raw_processing_func f, int type, char freeable);
+int register_post_raw_processing_cb(raw_processing_func f, int type, char freeable, unsigned int weight);
 
 int run_pre_raw_processing_cb(int type, str* data, struct sip_msg* msg);
 int run_post_raw_processing_cb(int type, str* data, struct sip_msg* msg);

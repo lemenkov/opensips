@@ -208,7 +208,7 @@ int exec_parse_err_cb( struct sip_msg *msg)
 	return exec_post_cb( msg, parse_err_cb);
 }
 
-static inline int insert_raw_processing_cb(raw_processing_func f, int type, struct raw_processing_cb_list* list, char freeable)
+static inline int insert_raw_processing_cb(raw_processing_func f, int type, struct raw_processing_cb_list* list, char freeable, unsigned int weight)
 {
 	struct raw_processing_cb_list *elem;
 
@@ -225,16 +225,24 @@ static inline int insert_raw_processing_cb(raw_processing_func f, int type, stru
 
 	elem->f = f;
 	elem->freeable = freeable;
+	elem->weight = weight;
 	elem->next = NULL;
+
+	struct raw_processing_cb_list *current = list;
 
 	if (list == NULL) {
 		list = elem;
 		return !(type==PRE_RAW_PROCESSING ? (pre_processing_cb_list=list)
 										  : (post_processing_cb_list=list));
-	} else {
-		while (list->next != NULL)
-			list = list->next;
-		list->next=elem;
+	}
+
+	while (current) {
+		if (current->weight < elem->weight && (!current->next || elem->weight < current->next->weight)){
+			elem->next = current->next;
+			current->next = elem;
+			continue;
+		}
+		current = current->next;
 	}
 
 	return 0;
@@ -243,12 +251,12 @@ static inline int insert_raw_processing_cb(raw_processing_func f, int type, stru
 
 int register_pre_raw_processing_cb(raw_processing_func f, int type, char freeable)
 {
-	return  insert_raw_processing_cb(f, type, pre_processing_cb_list, freeable);
+	return  insert_raw_processing_cb(f, type, pre_processing_cb_list, freeable, 0);
 }
 
-int register_post_raw_processing_cb(raw_processing_func f, int type, char freeable)
+int register_post_raw_processing_cb(raw_processing_func f, int type, char freeable, unsigned int weight)
 {
-	return  insert_raw_processing_cb(f, type, post_processing_cb_list, freeable);
+	return  insert_raw_processing_cb(f, type, post_processing_cb_list, freeable, weight);
 }
 
 

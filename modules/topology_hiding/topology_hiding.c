@@ -174,7 +174,7 @@ static int mod_init(void)
 	}
 
 	if (register_post_raw_processing_cb(topo_callid_post_raw,
-	POST_RAW_PROCESSING, 0/*no free*/) < 0) {
+	POST_RAW_PROCESSING, 0/*no free*/, 0) < 0) {
 		LM_ERR("failed to initialize post raw support\n");
 		return -1;
 	}
