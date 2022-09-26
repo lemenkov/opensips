@@ -23,6 +23,7 @@
 #include "../../mem/shm_mem.h"
 #include "../../timer.h"
 #include "dlg_timer.h"
+#include "dlg_handlers.h"
 #include "dlg_hash.h"
 #include "dlg_req_within.h"
 #include "dlg_replication.h"
@@ -838,7 +839,17 @@ void dlg_options_routine(unsigned int ticks , void * attr)
 		shm_free(it);
 		it = curr;
 
-		init_dlg_term_reason(dlg,"Ping Timeout",sizeof("Ping Timeout")-1);
+		if (dlg->legs[DLG_CALLER_LEG].reply_received == DLG_PING_FAIL)
+			init_dlg_term_reason(dlg,"Upstream Ping Timeout",sizeof("Upstream Ping Timeout")-1);
+		else if (dlg->legs[callee_idx(dlg)].reply_received == DLG_PING_FAIL)
+			init_dlg_term_reason(dlg,"Downstream Ping Timeout",sizeof("Downstream Ping Timeout")-1);
+		else{
+			LM_WARN("Ping Timeout: flags[%u] caller rr[%u] callee rr[%u]\n",
+					dlg->flags,
+					dlg->legs[DLG_CALLER_LEG].reply_received,
+					dlg->legs[callee_idx(dlg)].reply_received);
+			init_dlg_term_reason(dlg,"Ping Timeout",sizeof("Ping Timeout")-1);
+		}
 		/* FIXME - maybe better not to send BYE both ways as we know for
 		 * sure one end in down . */
 		dlg_end_dlg(dlg,0,1);
