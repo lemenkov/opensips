@@ -34,6 +34,7 @@ struct tm_binds tm_api;
 struct dlg_binds dlg_api;
 
 int force_dialog = 0;
+int pc_weight = 0;
 str topo_hiding_ct_params = {0,0};
 str topo_hiding_ct_hdr_params = {0,0};
 str topo_hiding_prefix = str_init("DLGCH_");
@@ -64,13 +65,14 @@ static cmd_export_t cmds[]={
 /* Exported parameters */
 static param_export_t params[] = {
 	{ "force_dialog",                INT_PARAM, &force_dialog                },
+	{ "processing_callback_weight",  INT_PARAM, &pc_weight                   },
 	{ "th_passed_contact_uri_params",STR_PARAM, &topo_hiding_ct_params.s     },
 	{ "th_passed_contact_params",    STR_PARAM, &topo_hiding_ct_hdr_params.s },
 	{ "th_callid_passwd",            STR_PARAM, &topo_hiding_seed.s          },
 	{ "th_callid_prefix",            STR_PARAM, &topo_hiding_prefix.s        },
 	{ "th_contact_encode_passwd",    STR_PARAM, &topo_hiding_ct_encode_pw.s  },
 	{ "th_contact_encode_param",     STR_PARAM, &th_contact_encode_param.s   },
-	{ "th_contact_encode_scheme",    STR_PARAM, &th_contact_encode_scheme.s   },
+	{ "th_contact_encode_scheme",    STR_PARAM, &th_contact_encode_scheme.s  },
 	{0, 0, 0}
 };
 
@@ -174,7 +176,7 @@ static int mod_init(void)
 	}
 
 	if (register_post_raw_processing_cb(topo_callid_post_raw,
-	POST_RAW_PROCESSING, 0/*no free*/, 0) < 0) {
+	POST_RAW_PROCESSING, 0/*no free*/, pc_weight) < 0) {
 		LM_ERR("failed to initialize post raw support\n");
 		return -1;
 	}

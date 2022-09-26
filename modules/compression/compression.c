@@ -118,6 +118,7 @@ static int child_init(int rank);
 static void mod_destroy();
 
 int mc_level = 6;
+int pc_weight = 0;
 unsigned char* mnd_hdrs_mask = NULL;
 unsigned char* compact_form_mask = NULL;
 struct tm_binds tm_api;
@@ -157,6 +158,7 @@ static str body_in  = {NULL, 0},
 
 static param_export_t mod_params[]={
 	{ "compression_level", INT_PARAM, &mc_level},
+	{ "processing_callback_weight", INT_PARAM, &pc_weight},
 	{0,0,0}
 };
 
@@ -647,7 +649,7 @@ static int mc_compact(struct sip_msg* msg, mc_whitelist_p wh_list, int* flags_p)
 	SET_GLOBAL_CTX(compact_ctx_pos, (void*)mc_compact_args_p);
 
 	/* register stateless callbacks */
-	if (register_post_raw_processing_cb(wrap_msg_compact, POST_RAW_PROCESSING, 1/*to be freed*/, 0) < 0) {
+	if (register_post_raw_processing_cb(wrap_msg_compact, POST_RAW_PROCESSING, 1/*to be freed*/, pc_weight) < 0) {
 		LM_ERR("failed to add raw processing cb\n");
 		goto error;
 	}
@@ -1094,7 +1096,7 @@ static int mc_compress(struct sip_msg* msg, int *algo_p, int *flags_p,
 	SET_GLOBAL_CTX(compress_ctx_pos, (void*)args);
 
 	/* register stateless callbacks */
-	if (register_post_raw_processing_cb(wrap_msg_compress, POST_RAW_PROCESSING, 1/*to be freed*/, 0) < 0) {
+	if (register_post_raw_processing_cb(wrap_msg_compress, POST_RAW_PROCESSING, 1/*to be freed*/, pc_weight+10) < 0) {
 		LM_ERR("failed to add raw processing cb\n");
 		goto end;
 	}
