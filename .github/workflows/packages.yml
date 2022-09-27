@@ -33,6 +33,7 @@ jobs:
       - name: Build packages
         run: |
             sudo apt install -y devscripts equivs
+            sudo apt install -y libmongoc-dev libradcli-dev
             sudo mk-build-deps --install packaging/debian/control
             make deb-orig-tar
             make deb
