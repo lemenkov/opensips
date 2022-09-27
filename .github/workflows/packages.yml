@@ -37,6 +37,8 @@ jobs:
             sudo mk-build-deps --install packaging/debian/control
             make deb-orig-tar
             make deb
+        env:
+            DEBBUILD_EXTRA_OPTIONS: "-us -uc"
       # https://github.com/marketplace/actions/upload-files-to-a-github-release
       - name: Upload binaries to release
         uses: svenstaro/upload-release-action@v2
