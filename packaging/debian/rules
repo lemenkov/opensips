@@ -84,6 +84,15 @@ ifeq ($(shell test $(MAJOR_RELEASE) -ge $(DIAMETER_RELEASE); echo $$?),0)
 	ALL_MODPKG_LIST += AUTH_JWT
 endif
 
+ifeq ($(shell dpkg-vendor --derives-from Debian && echo yes),yes)
+	LIBMONGOC_MAJOR_RELEASE=9
+endif
+ifeq ($(shell dpkg-vendor --derives-from Ubuntu && echo yes),yes)
+	LIBMONGOC_MAJOR_RELEASE=16
+endif
+ifeq ($(shell test $(MAJOR_RELEASE) -ge $(LIBMONGOC_MAJOR_RELEASE); echo $$?),0)
+	ALL_MODPKG_LIST += MONGODB
+endif
 RADCLI_MAJOR_RELEASE=$(LIBMONGOC_MAJOR_RELEASE)
 
 ifeq ($(BUILD_MODPKG_LIST),NONE)
