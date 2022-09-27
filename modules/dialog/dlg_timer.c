@@ -839,10 +839,12 @@ void dlg_options_routine(unsigned int ticks , void * attr)
 		shm_free(it);
 		it = curr;
 
-		if (ctx_lastdstleg_get() == DLG_CALLER_LEG)
-			init_dlg_term_reason(dlg,"Upstream Ping Timeout",sizeof("Upstream Ping Timeout")-1);
-		else
-			init_dlg_term_reason(dlg,"Downstream Ping Timeout",sizeof("Downstream Ping Timeout")-1);
+		//if (ctx_lastdstleg_get() == DLG_CALLER_LEG)
+		LM_WARN("STATE CALLER: FLAGS[%u] RR[%u]\n", dlg->flags, dlg->legs[DLG_CALLER_LEG].reply_received);
+		LM_WARN("STATE CALLEE: FLAGS[%u] RR[%u]\n", dlg->flags, dlg->legs[callee_idx(dlg)].reply_received);
+			init_dlg_term_reason(dlg,"Ping Timeout",sizeof("Ping Timeout")-1);
+		//else
+		//	init_dlg_term_reason(dlg,"Downstream Ping Timeout",sizeof("Downstream Ping Timeout")-1);
 		/* FIXME - maybe better not to send BYE both ways as we know for
 		 * sure one end in down . */
 		dlg_end_dlg(dlg,0,1);
