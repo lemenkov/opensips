@@ -82,7 +82,7 @@ int dialog_offline_body(str* body, str** offline_body)
 {
 	xmlDocPtr doc= NULL;
 	xmlNodePtr node;
-	const xmlErrorPtr xml_error;
+	xmlErrorPtr xml_error;
 	str* new_body = NULL;
 	char *err_msg;
 	int rc = OFFB_STATUS_ERROR;
@@ -143,7 +143,7 @@ int presence_offline_body(str* body, str** offline_body)
 	xmlDocPtr new_doc= NULL;
 	xmlNodePtr node, tuple_node= NULL, status_node;
 	xmlNodePtr root_node, add_node, pres_node;
-	const xmlErrorPtr xml_error;
+	xmlErrorPtr	xml_error;
 	str* new_body;
 	char *err_msg;
 	int rc = OFFB_STATUS_ERROR;

@@ -40,7 +40,7 @@ static int bla_body_is_valid(str *bla_body)
 {
 	xmlDocPtr	doc = NULL;
 	xmlNodePtr	node = NULL;
-	const xmlErrorPtr xml_err;
+	xmlErrorPtr	xml_err = NULL;
 	int		valid = 0;
 
 	doc = xmlParseMemory(bla_body->s, bla_body->len);
