@@ -174,12 +174,10 @@ static char* flags=OPENSIPS_COMPILE_FLAGS;
 static int user_id = 0;
 static int group_id = 0;
 
-#ifdef VERSIONTYPE
 const struct scm_version core_scm_ver = {
 	.type = VERSIONTYPE,
 	.rev = THISREVISION
 };
-#endif
 
 /**
  * Print compile-time constants
