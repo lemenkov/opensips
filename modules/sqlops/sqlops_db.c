@@ -753,7 +753,8 @@ int sql_api_select(struct db_url *url, struct sip_msg* msg, cJSON *Jcols,
 	(keys && (id=_query_id_add_filter(keys,ops,nk))==NULL) ) {
 		LM_DBG("not using PS\n");
 	} else {
-		LM_DBG("PS id is <%.*s>\n",id->len,id->s);
+		if(id)
+			LM_DBG("PS id is <%.*s>\n",id->len,id->s);
 		if (ps_map!=NULL || (ps_map=map_create(0))!=NULL) {
 			if ( (my_ps=map_get( ps_map, *id ))!=NULL) {
 				LM_DBG("using PS %p\n",*my_ps);
@@ -805,7 +806,7 @@ int sql_api_update(struct db_url *url, struct sip_msg* msg, cJSON *Jcols,
 	db_op_t *uops, *ops;
 	db_val_t *uvals, *vals;
 	int nk, unk;
-	str *id;
+	str *id = NULL;
 	db_ps_t *my_ps;
 
 	/* convert JSON to COLs */
@@ -839,7 +840,8 @@ int sql_api_update(struct db_url *url, struct sip_msg* msg, cJSON *Jcols,
 	(keys && (id=_query_id_add_filter(keys,ops,nk))==NULL) ) {
 		LM_DBG("not using PS\n");
 	} else {
-		LM_DBG("PS id is <%.*s>\n",id->len,id->s);
+		if(id)
+			LM_DBG("PS id is <%.*s>\n",id->len,id->s);
 		if (ps_map!=NULL || (ps_map=map_create(0))!=NULL) {
 			if ( (my_ps=map_get( ps_map, *id ))!=NULL) {
 				LM_DBG("using PS %p\n",*my_ps);
@@ -869,7 +871,7 @@ int sql_api_insert(struct db_url *url, struct sip_msg* msg, str *table,
 	db_op_t *uops;
 	db_val_t *uvals;
 	int unk;
-	str *id;
+	str *id = NULL;
 	db_ps_t *my_ps;
 
 	/* convert JSON to COLs */
@@ -889,7 +891,8 @@ int sql_api_insert(struct db_url *url, struct sip_msg* msg, str *table,
 	(id=_query_id_add_filter(ukeys,uops,unk))==NULL ) {
 		LM_DBG("not using PS\n");
 	} else {
-		LM_DBG("PS id is <%.*s>\n",id->len,id->s);
+		if(id)
+			LM_DBG("PS id is <%.*s>\n",id->len,id->s);
 		if (ps_map!=NULL || (ps_map=map_create(0))!=NULL) {
 			if ( (my_ps=map_get( ps_map, *id ))!=NULL) {
 				LM_DBG("using PS %p\n",*my_ps);
@@ -919,7 +922,7 @@ int sql_api_delete(struct db_url *url, struct sip_msg* msg,
 	db_op_t *ops;
 	db_val_t *vals;
 	int nk;
-	str *id;
+	str *id = NULL;
 	db_ps_t *my_ps;
 
 	/* convert JSON to keys */
@@ -946,7 +949,8 @@ int sql_api_delete(struct db_url *url, struct sip_msg* msg,
 	(keys && (id=_query_id_add_filter(keys,ops,nk))==NULL) ) {
 		LM_DBG("not using PS\n");
 	} else {
-		LM_DBG("PS id is <%.*s>\n",id->len,id->s);
+		if(id)
+			LM_DBG("PS id is <%.*s>\n",id->len,id->s);
 		if (ps_map!=NULL || (ps_map=map_create(0))!=NULL) {
 			if ( (my_ps=map_get( ps_map, *id ))!=NULL) {
 				LM_DBG("using PS %p\n",*my_ps);
@@ -976,7 +980,7 @@ int sql_api_replace(struct db_url *url, struct sip_msg* msg, str *table,
 	db_op_t *uops;
 	db_val_t *uvals;
 	int unk;
-	str *id;
+	str *id = NULL;
 	db_ps_t *my_ps;
 
 	/* convert JSON to COLs */
@@ -996,7 +1000,8 @@ int sql_api_replace(struct db_url *url, struct sip_msg* msg, str *table,
 	(id=_query_id_add_filter(ukeys,uops,unk))==NULL ) {
 		LM_DBG("not using PS\n");
 	} else {
-		LM_DBG("PS id is <%.*s>\n",id->len,id->s);
+		if(id)
+			LM_DBG("PS id is <%.*s>\n",id->len,id->s);
 		if (ps_map!=NULL || (ps_map=map_create(0))!=NULL) {
 			if ( (my_ps=map_get( ps_map, *id ))!=NULL) {
 				LM_DBG("using PS %p\n",*my_ps);
