@@ -96,7 +96,9 @@ static int mod_init(void)
 			return -1;
 		}
 
+#if AMQP_VERSION_MAJOR == 0 && AMQP_VERSION_MINOR < 13
 		amqp_set_initialize_ssl_library(0);
+#endif // AMQP_VERSION_MAJOR == 0 && AMQP_VERSION_MINOR < 13
 	}
 
 	return 0;
