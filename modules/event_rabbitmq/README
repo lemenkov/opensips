@@ -130,7 +130,7 @@ Chapter 1. Admin Guide
 
    The following libraries or applications must be installed
    before running OpenSIPS with this module loaded:
-     * librabbitmq-dev
+     * librabbitmq-dev ver. 0.9 or higher
 
 1.5. Exported Parameters
 
