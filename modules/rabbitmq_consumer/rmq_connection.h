@@ -22,9 +22,9 @@
 #ifndef _RMQ_CONNECTION_H_
 #define _RMQ_CONNECTION_H_
 
-#include <amqp.h>
-#include <amqp_tcp_socket.h>
-#include <amqp_ssl_socket.h>
+#include <rabbitmq-c/amqp.h>
+#include <rabbitmq-c/tcp_socket.h>
+#include <rabbitmq-c/ssl_socket.h>
 
 #include "../../lib/list.h"
 #include "../../evi/evi_params.h"

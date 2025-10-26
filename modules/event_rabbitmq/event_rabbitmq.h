@@ -27,13 +27,10 @@
 #ifndef _EV_RMQ_H_
 #define _EV_RMQ_H_
 
-#include <amqp.h>
-#include <amqp_framing.h>
-#if defined AMQP_VERSION && AMQP_VERSION >= 0x00040000
-  #define AMQP_VERSION_v04
-#include <amqp_tcp_socket.h>
-#include <amqp_ssl_socket.h>
-#endif
+#include <rabbitmq-c/amqp.h>
+#include <rabbitmq-c/framing.h>
+#include <rabbitmq-c/tcp_socket.h>
+#include <rabbitmq-c/ssl_socket.h>
 
 #include "../tls_mgm/api.h"
 #include "rmq_servers.h"

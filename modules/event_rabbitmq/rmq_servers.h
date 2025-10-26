@@ -40,7 +40,7 @@
 
 #include "../tls_openssl/openssl_api.h"
 #include "../tls_mgm/api.h"
-#include <amqp.h>
+#include <rabbitmq-c/amqp.h>
 #include "../../lib/list.h"
 
 #if AMQP_VERSION < AMQP_VERSION_CODE(0, 10, 0, 0)
@@ -49,30 +49,8 @@
 extern gen_lock_t *ssl_lock;
 #endif
 
-/* AMQP_VERSION was only added in v0.4.0 - there is no way to check the
- * version of the library before this, so we consider everything beyond v0.4.0
- * as old and inneficient */
-#if defined AMQP_VERSION && AMQP_VERSION >= AMQP_VERSION_CODE(0, 4, 0, 0)
-  #define AMQP_VERSION_v04
-#include <amqp_tcp_socket.h>
-#include <amqp_ssl_socket.h>
-#define rmq_uri struct amqp_connection_info
-#define RMQ_EMPTY amqp_empty_bytes
-#else
-/* although struct amqp_connection_info was added in v0.2.0, there is no way
- * to check against that version, so we assume it does not exist until v0.4.0
- */
-typedef struct _rmq_uri {
-	char *user;
-	char *password;
-	char *host;
-	char *vhost;
-	int port;
-	int ssl;
-} rmq_uri;
-#define RMQ_EMPTY AMQP_EMPTY_BYTES
-#endif
-
+#include <rabbitmq-c/tcp_socket.h>
+#include <rabbitmq-c/ssl_socket.h>
 
 enum rmq_server_state { RMQS_OFF, RMQS_INIT, RMQS_CONN, RMQS_ON };
 
@@ -82,7 +60,7 @@ enum rmq_server_state { RMQS_OFF, RMQS_INIT, RMQS_CONN, RMQS_ON };
 
 typedef struct rmq_connection {
 	enum rmq_server_state state;
-	rmq_uri uri;
+	struct amqp_connection_info uri;
 	unsigned flags;
 	int heartbeat;
 	str tls_dom_name;

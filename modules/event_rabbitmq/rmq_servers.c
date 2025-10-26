@@ -33,61 +33,7 @@
 
 #include "rmq_servers.h"
 #include "rabbitmq_send.h"
-#include <amqp_framing.h>
-
-#ifdef AMQP_VERSION_v04
-#define rmq_parse_rm amqp_parse_url
-#else
-#include "../../db/db_id.h"
-#warning "You are using an old, unsupported RabbitMQ library version - compile on your own risk!"
-/* ugly hack to move ptr from id to rmq_uri */
-#define PTR_MOVE(_from, _to) \
-	do { \
-		(_to) = (_from); \
-		(_from) = NULL; \
-	} while(0)
-static inline int rmq_parse_rm(char *url, rmq_uri *uri)
-{
-	str surl;
-	struct db_id *id;
-
-	surl.s = url;
-	surl.len = strlen(url);
-
-	if ((id = new_db_id(&surl)) == NULL)
-		return -1;
-
-	if (strcmp(id->scheme, "amqps") == 0)
-		uri->ssl = 1;
-
-	/* there might me a pkg leak compared to the newer version, but parsing
-	 * only happends at startup, so we should not worry about this now */
-	if (id->username)
-		PTR_MOVE(id->username, uri->user);
-	else
-		uri->user = "guest";
-	if (id->password)
-		PTR_MOVE(id->password, uri->password);
-	else
-		uri->password = "guest";
-	if (id->host)
-		PTR_MOVE(id->host, uri->host);
-	else
-		uri->host = "localhost";
-	if (id->database)
-		PTR_MOVE(id->database, uri->vhost);
-	else
-		uri->vhost = "/";
-	if (id->port)
-		uri->port = id->port;
-	else if (uri->ssl)
-		uri->port = 5671;
-	else
-		uri->port = 5672;
-	free_db_id(id);
-	return 0;
-}
-#endif
+#include <rabbitmq-c/framing.h>
 
 static OSIPS_LIST_HEAD(rmq_servers);
 
@@ -117,9 +63,6 @@ int rmq_error(char const *context, amqp_rpc_reply_t x)
 {
 	amqp_connection_close_t *mconn;
 	amqp_channel_close_t *mchan;
-#ifndef AMQP_VERSION_v04
-	char *errorstr;
-#endif
 
 	switch (x.reply_type) {
 		case AMQP_RESPONSE_NORMAL:
@@ -130,13 +73,7 @@ int rmq_error(char const *context, amqp_rpc_reply_t x)
 			break;
 
 		case AMQP_RESPONSE_LIBRARY_EXCEPTION:
-#ifndef AMQP_VERSION_v04
-			errorstr = amqp_error_string(x.library_error);
-			LM_ERR("%s: %s\n", context, errorstr);
-			free(errorstr);
-#else
 			LM_ERR("%s: %s\n", context, amqp_error_string2(x.library_error));
-#endif
 			break;
 
 		case AMQP_RESPONSE_SERVER_EXCEPTION:
@@ -170,9 +107,7 @@ int rmq_error(char const *context, amqp_rpc_reply_t x)
  */
 int rmq_reconnect(rmq_connection_t *conn, int max_frames, str cid)
 {
-#if defined AMQP_VERSION_v04
 	amqp_socket_t *amqp_sock;
-#endif
 	int socket;
 
 	switch (conn->state) {
@@ -181,7 +116,6 @@ int rmq_reconnect(rmq_connection_t *conn, int max_frames, str cid)
 			LM_ERR("cannot create amqp connection!\n");
 			return -1;
 		}
-#if defined AMQP_VERSION_v04
 		if (use_tls && (conn->uri.ssl || (conn->flags&RMQ_PARAM_TLS))) {
 			if (!conn->tls_dom) {
 				conn->tls_dom = tls_api.find_client_domain_name(&conn->tls_dom_name);
@@ -312,16 +246,6 @@ int rmq_reconnect(rmq_connection_t *conn, int max_frames, str cid)
 		if (rpc_timeout_tv.tv_sec > 0 &&
 				amqp_set_rpc_timeout(conn->conn, &rpc_timeout_tv) < 0)
 			LM_ERR("setting RPC timeout - going blocking\n");
-#endif
-
-#else
-		socket = amqp_open_socket_noblock(conn->uri.host, conn->uri.port,
-				&conn_timeout_tv);
-		if (socket < 0) {
-			LM_ERR("cannot open AMQP socket\n");
-			return -1;
-		}
-		amqp_set_sockfd(srv->conn, socket);
 #endif
 		conn->state = RMQS_INIT;
 		/* fall through */
@@ -567,7 +491,7 @@ no_value:
 	memcpy(uri, suri.s, suri.len);
 	uri[suri.len] = 0;
 
-	if (rmq_parse_rm(uri, &srv->conn.uri) != 0) {
+	if (amqp_parse_url(uri, &srv->conn.uri) != 0) {
 		LM_ERR("[%.*s] cannot parse rabbitmq uri: %s\n", cid.len, cid.s, uri);
 		goto free;
 	}
@@ -604,7 +528,7 @@ no_value:
 		}
 		memcpy(srv->conn.exchange.bytes, exchange.s, exchange.len);
 	} else
-		srv->conn.exchange = RMQ_EMPTY;
+		srv->conn.exchange = amqp_empty_bytes;
 
 	srv->conn.state = RMQS_OFF;
 	srv->cid = cid;
@@ -676,16 +600,6 @@ void rmq_connect_servers(void)
 
 int amqp_check_status(rmq_connection_t *conn, int r, int *retry, str cid)
 {
-#ifndef AMQP_VERSION_v04
-	if (r != 0) {
-		LM_ERR("[%.*s] unknown AMQP error [%d] while sending\n",
-				srv->cid.len, srv->cid.s, r);
-		/* we close the connection here to be able to re-connect later */
-		/* TODO: close the connection */
-		return r;
-	}
-	return 0;
-#else
 	switch (r) {
 		case AMQP_STATUS_OK:
 			return 0;
@@ -740,7 +654,6 @@ no_close:
 		return 1;
 	}
 	return r;
-#endif
 }
 
 int rmq_basic_publish(rmq_connection_t *conn, int max_frames,
