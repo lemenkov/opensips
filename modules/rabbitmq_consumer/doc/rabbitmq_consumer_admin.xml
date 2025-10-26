@@ -50,7 +50,7 @@
 			</listitem>
 			</itemizedlist>
 		<para>
-			NOte that the module is not compatible with versions 0.4 or below of
+			Note that the module is not compatible with versions below 0.9 of
 			the librabbitmq-dev library.
 		</para>
 	</section>

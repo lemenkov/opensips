@@ -72,8 +72,8 @@ Chapter 1. Admin Guide
    before running OpenSIPS with this module loaded:
      * librabbitmq-dev
 
-   NOte that the module is not compatible with versions 0.4 or
-   below of the librabbitmq-dev library.
+   Note that the module is not compatible with versions below 0.9
+   of the librabbitmq-dev library.
 
 1.3. Exported Parameters
 
