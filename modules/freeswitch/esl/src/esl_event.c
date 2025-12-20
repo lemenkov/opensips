@@ -425,7 +425,7 @@ static esl_status_t esl_event_base_add_header(esl_event_t *event, esl_stack_t st
 		esl_event_set_body(event, data);
 	}
 
-	if ((index_ptr = strchr(header_name, '['))) {
+	if ((index_ptr = (char *)strchr(header_name, '['))) {
 		index_ptr++;
 		index = atoi(index_ptr);
 		real_header_name = DUP(header_name);
