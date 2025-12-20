@@ -417,7 +417,7 @@ static esl_status_t esl_event_base_add_header(esl_event_t *event, esl_stack_t st
 	esl_event_header_t *header = NULL;
 	esl_ssize_t hlen = -1;
 	int exists = 0, fly = 0;
-	char *index_ptr;
+	const char *index_ptr;
 	int index = 0;
 	char *real_header_name = NULL;
 
