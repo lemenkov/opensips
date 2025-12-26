@@ -23,6 +23,7 @@
 
 #include "../../aaa/aaa.h"
 #include "diameter_api.h"
+#include <stdint.h>
 
 #define __FD_CHECK(__call__, __retok__, __retval__) \
 	do { \
@@ -90,7 +91,7 @@ struct _dm_dict {
 struct dm_message {
 	aaa_message *am; /* back-reference, useful during cleanup */
 
-	void *fd_req;
+	uintptr_t fd_req;
 	unsigned int app_id;   /* these two are used when sending */
 	unsigned int cmd_code; /* custom Diameter requests */
 	int error_bit;
@@ -163,7 +164,7 @@ int dm_register_callbacks(void);
 int dm_find(aaa_conn *_, aaa_map *map, int op);
 aaa_message *dm_create_message(aaa_conn *_, int msg_type);
 aaa_message *_dm_create_message(aaa_conn *_, int msg_type,
-        unsigned int app_id, unsigned int cmd_code, void *fd_req);
+        unsigned int app_id, unsigned int cmd_code, uintptr_t fd_req);
 int dm_avp_add(aaa_conn *_, aaa_message *msg, aaa_map *avp, void *val,
                int val_length, int vendor);
 int dm_build_avps(struct list_head *subavps, cJSON *array);
