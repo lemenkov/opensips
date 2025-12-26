@@ -654,9 +654,9 @@ static int redis_run_command(cachedb_con *connection, redisReply **rpl,
 static int redis_run_command_argv(cachedb_con *connection, redisReply **rpl,
               str *key, int argc, const char **argv, const size_t *argvlen)
 {
-	va_list _;
+	va_list unused_ap = {0};
 
-	return _redis_run_command(connection, rpl, key, argc, argv, argvlen, NULL, _);
+	return _redis_run_command(connection, rpl, key, argc, argv, argvlen, NULL, unused_ap);
 }
 
 int redis_get(cachedb_con *connection,str *attr,str *val)
