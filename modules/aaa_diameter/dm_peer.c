@@ -24,6 +24,7 @@
 #include "../../sr_module.h"
 #include "../../locking.h"
 #include "../../lib/list.h"
+#include <stdint.h>
 
 #include "dm_impl.h"
 #include "dm_peer.h"
@@ -511,7 +512,7 @@ static int dm_send_custom_req(struct dm_message *msg)
 
 int dm_send_custom_rpl(struct dm_message *dm)
 {
-	struct msg *ans = (struct msg *)dm->fd_req;
+	struct msg *ans = (struct msg *)(uintptr_t)dm->fd_req;
 	int rc, flags = 0;
 
 	if (!dm_server_autoreply_error && dm_remove_unreplied_req(ans) != 0) {

@@ -19,6 +19,7 @@
  */
 
 #include <freeDiameter/extension.h>
+#include <stdint.h>
 
 #include "../../sr_module.h"
 #include "../../lib/list.h"
@@ -308,7 +309,7 @@ static int dm_send_request(struct sip_msg *msg, int *app_id, int *cmd_code,
 		goto error;
 	}
 
-	dmsg = _dm_create_message(NULL, AAA_CUSTOM_REQ, *app_id, *cmd_code, NULL);
+	dmsg = _dm_create_message(NULL, AAA_CUSTOM_REQ, *app_id, *cmd_code, 0);
 	if (!dmsg) {
 		LM_ERR("oom\n");
 		goto error;
@@ -421,7 +422,7 @@ static int dm_send_answer(struct sip_msg *msg, str *avp_json, int *is_error)
 		reverse_hex2int64(res.rs.s, res.rs.len, 1, &fd_req);
 	}
 
-	dmsg = _dm_create_message(NULL, AAA_CUSTOM_RPL, appid, cmdcode, (void *)fd_req);
+	dmsg = _dm_create_message(NULL, AAA_CUSTOM_RPL, appid, cmdcode, fd_req);
 	if (!dmsg) {
 		LM_ERR("oom\n");
 		goto error;
@@ -572,7 +573,7 @@ static int dm_send_request_async(struct sip_msg *msg, async_ctx *ctx,
 		goto error;
 	}
 
-	dmsg = _dm_create_message(NULL, AAA_CUSTOM_REQ, *app_id, *cmd_code, NULL);
+	dmsg = _dm_create_message(NULL, AAA_CUSTOM_REQ, *app_id, *cmd_code, 0);
 	if (!dmsg) {
 		LM_ERR("oom\n");
 		goto error;

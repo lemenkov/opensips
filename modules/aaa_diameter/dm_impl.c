@@ -21,6 +21,7 @@
 #include <freeDiameter/extension.h>
 #include <sys/eventfd.h>
 #include <inttypes.h>
+#include <stdint.h>
 
 #include "../../ut.h"
 #include "../../lib/list.h"
@@ -592,7 +593,7 @@ static int dm_receive_req(struct msg **_req, struct avp * avp, struct session * 
 
 		memset(&dm, 0, sizeof dm);
 
-		dm.fd_req = req;
+		dm.fd_req = (uintptr_t)req;
 		dm.app_id = hdr->msg_appl;
 		dm.cmd_code = hdr->msg_code;
 		dm.error_bit = 1;
@@ -1694,7 +1695,7 @@ int dm_api_find_cmd(diameter_conn *conn, int cmd_code)
 }
 
 aaa_message *_dm_create_message(aaa_conn *_, int msg_type,
-        unsigned int app_id, unsigned int cmd_code, void *fd_msg)
+        unsigned int app_id, unsigned int cmd_code, uintptr_t fd_msg)
 {
 	aaa_message *m;
 	struct dm_message *dm;
@@ -1721,7 +1722,7 @@ aaa_message *_dm_create_message(aaa_conn *_, int msg_type,
 	dm->am = m;
 	dm->app_id = app_id;
 	dm->cmd_code = cmd_code;
-	dm->fd_req = fd_msg;
+	dm->fd_req = (uintptr_t)fd_msg;
 
 	return m;
 }
@@ -1729,7 +1730,7 @@ aaa_message *_dm_create_message(aaa_conn *_, int msg_type,
 
 aaa_message *dm_create_message(aaa_conn *_, int msg_type)
 {
-	return _dm_create_message(_, msg_type, 0, 0, NULL);
+	return _dm_create_message(_, msg_type, 0, 0, 0);
 }
 
 
@@ -2082,7 +2083,7 @@ int dm_api_send_req(diameter_conn *conn, int app_id, int cmd_code, cJSON *req, d
 		return -2;
 	}
 
-	dmsg = _dm_create_message(NULL, AAA_CUSTOM_REQ, app_id, cmd_code, NULL);
+	dmsg = _dm_create_message(NULL, AAA_CUSTOM_REQ, app_id, cmd_code, 0);
 	if (!dmsg) {
 		LM_ERR("oom\n");
 		return -1;
@@ -2119,7 +2120,7 @@ int dm_api_send_req_async(diameter_conn *conn, int app_id, int cmd_code, cJSON *
 		return -2;
 	}
 
-	dmsg = _dm_create_message(NULL, AAA_CUSTOM_REQ, app_id, cmd_code, NULL);
+	dmsg = _dm_create_message(NULL, AAA_CUSTOM_REQ, app_id, cmd_code, 0);
 	if (!dmsg) {
 		LM_ERR("oom\n");
 		return -1;
