@@ -605,6 +605,8 @@ int handle_openserDialogLimitMajorAlarm(netsnmp_mib_handler *handler,
 static int set_if_valid_threshold(modparam_t type, void *val, char *varStr,
 	int *newVal)
 {
+	int new_threshold;
+
 	if (val==0) {
 		LM_ERR("%s called with a null value!\n", varStr);
 		return -1;
@@ -616,7 +618,7 @@ static int set_if_valid_threshold(modparam_t type, void *val, char *varStr,
 		return -1;
 	}
 
-	int new_threshold = (int)(long)(int *)val;
+	new_threshold = (int)(long)(int *)val;
 
 	if (new_threshold < -1) {
 		LM_ERR("%s called with an invalid threshold=%d!\n",
