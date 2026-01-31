@@ -225,14 +225,13 @@ void updateUser(char *userName)
  * Returns: The rows userIndex on success, and 0 otherwise. */
 int createRegUserRow(char *stringToRegister)
 {
+	openserSIPRegUserTable_context *theRow;
+	oid  *OIDIndex;
+	int  stringLength;
+
 	int static index = 0;
 
 	index++;
-
-	openserSIPRegUserTable_context *theRow;
-
-	oid  *OIDIndex;
-	int  stringLength;
 
 	theRow = SNMP_MALLOC_TYPEDEF(openserSIPRegUserTable_context);
 
@@ -280,11 +279,11 @@ int createRegUserRow(char *stringToRegister)
 /* Initializes the openserSIPRegUserTable module.  */
 void init_openserSIPRegUserTable(void)
 {
-	/* Register this table with the master agent */
-	initialize_table_openserSIPRegUserTable();
-
 	/* We need to create a default row, so create DefaultUser */
 	static char *defaultUser = "DefaultUser";
+
+	/* Register this table with the master agent */
+	initialize_table_openserSIPRegUserTable();
 
 	createRegUserRow(defaultUser);
 }
@@ -350,14 +349,16 @@ int openserSIPRegUserTable_get_value(
 		netsnmp_index *item,
 		netsnmp_table_request_info *table_info )
 {
+	netsnmp_variable_list *var = NULL;
+	openserSIPRegUserTable_context *context = NULL;
+
 	/* First things first, we need to consume the interprocess buffer, in
 	 * case something has changed. We want to return the freshest data. */
 	consumeInterprocessBuffer();
 
-	netsnmp_variable_list *var = request->requestvb;
+	var = request->requestvb;
 
-	openserSIPRegUserTable_context *context =
-		(openserSIPRegUserTable_context *)item;
+	context = (openserSIPRegUserTable_context *)item;
 
 	switch(table_info->colnum)
 	{
