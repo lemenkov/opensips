@@ -225,6 +225,8 @@ int handle_openserSIPServiceStartTime(netsnmp_mib_handler *handler,
 
 	int elapsedTime = 0;
 	char buffer[SNMPGET_MAX_BUFFER];
+	char *openBracePosition = NULL;
+	char *closedBracePosition = NULL;
 
 	FILE *theFile = fopen(SNMPGET_TEMP_FILE, "r");
 
@@ -241,8 +243,8 @@ int handle_openserSIPServiceStartTime(netsnmp_mib_handler *handler,
 
 		/* Find the positions of '(' and ')' so we can extract out the
 		 * timeticks value. */
-		char *openBracePosition   = strchr(buffer, '(');
-		char *closedBracePosition = strchr(buffer, ')');
+		openBracePosition   = strchr(buffer, '(');
+		closedBracePosition = strchr(buffer, ')');
 
 		/* Make sure that both the '(' and ')' exist in the file, and
 		 * that '(' occurs earlier than the ')'.  If all these
@@ -464,6 +466,7 @@ int handle_openserSIPOtherwiseDiscardedMsgs(netsnmp_mib_handler *handler,
  */
 int handleSipEntityType( modparam_t type, void* val)
 {
+	char *strEntityType = NULL;
 
 	/* By default we start off as "other". */
 	static char firstTime = 1;
@@ -472,7 +475,7 @@ int handleSipEntityType( modparam_t type, void* val)
 		return -1;
 	}
 
-	char *strEntityType = (char *)val;
+	strEntityType = (char *)val;
 
 	/* This is our first time through this function, so we need to change
 	 * openserEntityType from its default to 0, allowing our bitmasks below

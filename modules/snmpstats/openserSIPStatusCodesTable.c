@@ -310,6 +310,7 @@ int openserSIPStatusCodesTable_can_delete(
 openserSIPStatusCodesTable_context *
 openserSIPStatusCodesTable_create_row( netsnmp_index* hdr)
 {
+	int codeIndex;
 	stat_var *in_status_code;
 	stat_var *out_status_code;
 
@@ -337,7 +338,7 @@ openserSIPStatusCodesTable_create_row( netsnmp_index* hdr)
 	/* Retrieve the index for the status code, and then assign the starting
 	 * values.  The starting values will be used to calculate deltas during
 	 * the next snmpget/snmpwalk/snmptable/etc. */
-	int codeIndex = ctx->openserSIPStatusCodeValue;
+	codeIndex = ctx->openserSIPStatusCodeValue;
 
 	ctx->startingInStatusCodeValue  = 0;
 	ctx->startingOutStatusCodeValue = 0;
