@@ -104,18 +104,16 @@ openserSIPPortTable_context *getRow(int ipType, unsigned int *ipAddress)
 {
 	int lengthOfOID;
 	oid *currentOIDIndex = createIndex(ipType, ipAddress, &lengthOfOID);
+	netsnmp_index theIndex;
+	openserSIPPortTable_context *rowToReturn = NULL;
 
 	if (currentOIDIndex == NULL)
 	{
 		return NULL;
 	}
 
-	netsnmp_index theIndex;
-
 	theIndex.oids = currentOIDIndex;
 	theIndex.len  = lengthOfOID;
-
-	openserSIPPortTable_context *rowToReturn;
 
 	/* Lets check to see if there is an existing row. */
 	rowToReturn = CONTAINER_FIND(cb.container, &theIndex);
@@ -218,8 +216,6 @@ void init_openserSIPPortTable(void)
 {
 	int curSNMPIndex = 0;
 
-	initialize_table_openserSIPPortTable();
-
 	unsigned int *UDPList = NULL;
 	unsigned int *TCPList = NULL;
 	unsigned int *TLSList = NULL;
@@ -227,6 +223,8 @@ void init_openserSIPPortTable(void)
 	int numUDPSockets;
 	int numTCPSockets;
 	int numTLSSockets;
+
+	initialize_table_openserSIPPortTable();
 
 	/* Retrieve the list of the number of UDP and TCP sockets. */
 	numUDPSockets = get_socket_list_from_proto(&UDPList, PROTO_UDP);

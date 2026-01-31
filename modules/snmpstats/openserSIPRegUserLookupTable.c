@@ -514,23 +514,20 @@ void openserSIPRegUserLookupTable_set_reserve2( netsnmp_request_group *rg )
  */
 void openserSIPRegUserLookupTable_set_action( netsnmp_request_group *rg )
 {
+	aorToIndexStruct_t *hashRecord;
+	netsnmp_variable_list *var;
+	netsnmp_request_group_item *current;
+	int row_err = 0;
+	openserSIPRegUserLookupTable_context *row_ctx = NULL;
+	openserSIPRegUserLookupTable_context *undo_ctx = NULL;
+
 	/* First things first, we need to consume the interprocess buffer, in
 	 * case something has changed. We want to return the freshest data. */
 	consumeInterprocessBuffer();
 
-	aorToIndexStruct_t *hashRecord;
+	row_ctx = (openserSIPRegUserLookupTable_context *)rg->existing_row;
 
-	netsnmp_variable_list *var;
-
-	openserSIPRegUserLookupTable_context *row_ctx =
-		(openserSIPRegUserLookupTable_context *)rg->existing_row;
-
-	openserSIPRegUserLookupTable_context *undo_ctx =
-		(openserSIPRegUserLookupTable_context *)rg->undo_info;
-
-	netsnmp_request_group_item *current;
-
-	int			row_err = 0;
+	undo_ctx = (openserSIPRegUserLookupTable_context *)rg->undo_info;
 
 	/* Copy the actual data to the row. */
 	for( current = rg->list; current; current = current->next ) {

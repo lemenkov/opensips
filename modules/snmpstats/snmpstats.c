@@ -346,7 +346,12 @@ static void sigchld_handler(int signal)
  */
 static int spawn_sysUpTime_child(void)
 {
+	pid_t result_pid;
+	int snmpget_fd;
+	int local_path_to_snmpget_length;
+	int snmpget_binary_name_length;
 	struct sigaction new_sigchld_handler;
+	char *args[6];
 
 	char *local_path_to_snmpget = "/usr/bin/";
 	char *snmpget_binary_name   = "/snmpget";
@@ -362,7 +367,7 @@ static int spawn_sysUpTime_child(void)
 	new_sigchld_handler.sa_handler = sigchld_handler;
 	sigaction(SIGCHLD, &new_sigchld_handler, &old_sigchld_handler);
 
-	pid_t result_pid = fork();
+	result_pid = fork();
 
 	if (result_pid < 0) {
 		LM_ERR("failed to not spawn an agent to check sysUpTime\n");
@@ -380,7 +385,7 @@ static int spawn_sysUpTime_child(void)
 
 	/* If we are here, then we are the child process.  Lets set up the file
 	 * descriptors so we can capture the output of snmpget. */
-	int snmpget_fd =
+	snmpget_fd =
 		open(SNMPGET_TEMP_FILE, O_CREAT|O_TRUNC|O_RDWR,
 				S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH);
 
@@ -401,8 +406,12 @@ static int spawn_sysUpTime_child(void)
 				"  Defaulting to %s\n",	snmp_community_string);
 	}
 
-	char *args[] = {"-Ov", "-c",  snmp_community_string, "localhost",
-		SYSUPTIME_OID, (char *) 0};
+	args[0] = "-Ov";
+	args[1] = "-c";
+	args[2] = snmp_community_string;
+	args[3] = "localhost";
+	args[4] = SYSUPTIME_OID;
+	args[5] = (char *)0;
 
 	/* Make sure we have a path to snmpget, so we can retrieve the
 	 * sysUpTime. */
@@ -416,8 +425,8 @@ static int spawn_sysUpTime_child(void)
 		local_path_to_snmpget = snmpget_path;
 	}
 
-	int local_path_to_snmpget_length = strlen(local_path_to_snmpget);
-	int snmpget_binary_name_length   = strlen(snmpget_binary_name);
+	local_path_to_snmpget_length = strlen(local_path_to_snmpget);
+	snmpget_binary_name_length   = strlen(snmpget_binary_name);
 
 	/* Allocate enough memory to hold the path, the binary name, and the
 	 * null character.  We don't use pkg_memory here. */
