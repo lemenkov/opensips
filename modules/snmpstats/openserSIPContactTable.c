@@ -261,9 +261,9 @@ void deleteContactRow(int userIndex, int contactIndex)
  */
 void init_openserSIPContactTable(void)
 {
-	initialize_table_openserSIPContactTable();
-
 	static char *defaultUser = "DefaultUser";
+
+	initialize_table_openserSIPContactTable();
 
 	createContactRow(1, 1, defaultUser, NULL);
 }
@@ -354,14 +354,16 @@ int openserSIPContactTable_get_value(
 	char       *retrievedExpiry;
 	struct tm  timeValue;
 
+	netsnmp_variable_list *var = NULL;
+	openserSIPContactTable_context *context = NULL;
+
 	/* First things first, we need to consume the interprocess buffer, in
 	 * case something has changed. We want to return the freshest data. */
 	consumeInterprocessBuffer();
 
-	netsnmp_variable_list *var = request->requestvb;
+	var = request->requestvb;
 
-	openserSIPContactTable_context *context =
-		(openserSIPContactTable_context *)item;
+	context = (openserSIPContactTable_context *)item;
 
 	switch(table_info->colnum)
 	{

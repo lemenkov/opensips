@@ -72,13 +72,13 @@ int stringHandlerSanityCheck( modparam_t type, void *val, char *parameterName)
 int get_statistic(char *statName)
 {
 	int result = 0;
-
+	stat_var *theVar = NULL;
 	str theStr;
 
 	theStr.s   = statName;
 	theStr.len = strlen(statName);
 
-	stat_var *theVar = get_stat(&theStr);
+	theVar = get_stat(&theStr);
 
 	if (theVar==0) {
 		LM_INFO("failed to retrieve statistics for %s\n", statName);
